@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Platewise</string>
+
+    <!-- Common -->
+    <string name="tab_diary">Diary</string>
+    <string name="tab_progress">Progress</string>
+    <string name="tab_profile">Profile</string>
+    <string name="back">Back</string>
+    <string name="cancel">Cancel</string>
+    <string name="add">Add</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="clear">Clear</string>
+    <string name="retry">Retry</string>
+    <string name="more_options">More options</string>
+    <string name="offline">No connection. Check your internet and try again.</string>
+    <string name="generic_error">Something went wrong: %s</string>
+
+    <!-- Meals -->
+    <string name="meal_breakfast">Breakfast</string>
+    <string name="meal_mid_morning">Mid-morning</string>
+    <string name="meal_lunch">Lunch</string>
+    <string name="meal_snack">Afternoon snack</string>
+    <string name="meal_dinner">Dinner</string>
+
+    <!-- Food sources -->
+    <string name="source_base">Reference</string>
+    <string name="source_off">Open Food Facts</string>
+    <string name="source_custom">My foods</string>
+    <string name="source_ai">AI estimate</string>
+    <string name="source_quick">Quick add</string>
+
+    <!-- Macros -->
+    <string name="protein">Protein</string>
+    <string name="carbs">Carbs</string>
+    <string name="fat">Fat</string>
+    <string name="letter_protein">P</string>
+    <string name="letter_carbs">C</string>
+    <string name="letter_fat">F</string>
+    <string name="calories">Calories</string>
+    <string name="kcal_value">%d kcal</string>
+    <string name="kcal_of">%1$d / %2$d kcal</string>
+    <string name="grams_of">%1$d / %2$d g</string>
+    <string name="kcal_left">kcal left</string>
+    <string name="kcal_over">kcal over</string>
+    <string name="kcal_from_macros">Calories from macros: %d kcal</string>
+
+    <!-- Diary -->
+    <string name="today">Today</string>
+    <string name="yesterday">Yesterday</string>
+    <string name="tomorrow">Tomorrow</string>
+    <string name="date_pattern">EEEE, MMMM d</string>
+    <string name="prev_day">Previous day</string>
+    <string name="next_day">Next day</string>
+    <string name="setup_goals_title">Set your goals</string>
+    <string name="setup_goals_body">We use your weight, height and activity to work out your calories and macros.</string>
+    <string name="add_to_meal">Add to %s</string>
+    <string name="copy_yesterday">Copy from yesterday</string>
+    <string name="food_photo">Food photo</string>
+    <string name="take_photo">Take photo</string>
+    <string name="pick_gallery">Choose from gallery</string>
+    <string name="amount_grams">%s g</string>
+    <string name="amount_servings">%1$s × %2$s (%3$s g)</string>
+    <string name="amount_quick">%s × serving</string>
+    <string name="quick_serving">serving</string>
+    <string name="change_meal">Change meal</string>
+    <string name="add_to_prefix">Add to</string>
+    <string name="macro_summary">P %1$s · C %2$s · F %3$s</string>
+
+    <!-- Messages -->
+    <string name="toast_added">%1$s added to %2$s</string>
+    <string name="toast_added_meal">Added to %s</string>
+    <plurals name="toast_added_n">
+        <item quantity="one">Added %1$d food to %2$s</item>
+        <item quantity="other">Added %1$d foods to %2$s</item>
+    </plurals>
+    <plurals name="toast_copied">
+        <item quantity="one">Copied %d food from yesterday</item>
+        <item quantity="other">Copied %d foods from yesterday</item>
+    </plurals>
+    <string name="toast_nothing_yesterday">Nothing was logged in %s yesterday</string>
+    <string name="toast_api_key_saved">API key saved</string>
+    <string name="toast_photo_error">Couldn\'t read the photo</string>
+    <string name="toast_no_camera">No camera app available</string>
+    <string name="toast_scanner_error">Couldn\'t open the barcode scanner</string>
+
+    <!-- Add food -->
+    <string name="add_food_title">Add food</string>
+    <string name="search_hint">Search: chicken, rice, yogurt…</string>
+    <string name="chip_photo">Photo</string>
+    <string name="chip_barcode">Barcode</string>
+    <string name="chip_describe">Describe</string>
+    <string name="chip_quick">Quick add</string>
+    <string name="chip_create">Create food</string>
+    <string name="looking_up_product">Looking up the product…</string>
+    <string name="recents">Recent</string>
+    <string name="my_foods">My foods</string>
+    <string name="empty_add_hint">Search for a food, scan a barcode or take a photo of your plate.</string>
+    <string name="search_off">Search \"%s\" on Open Food Facts</string>
+    <string name="more_off">More results on Open Food Facts</string>
+    <string name="searching_off">Searching Open Food Facts…</string>
+    <string name="no_off_results">No results on Open Food Facts.</string>
+    <string name="estimate_with_ai">Estimate it with AI</string>
+    <string name="per_100g">Per 100 g</string>
+    <string name="kcal_per_100">%d kcal/100 g</string>
+    <string name="remove_from_my_foods">Remove from my foods</string>
+    <string name="off_rate_limited">Open Food Facts is limiting searches. Wait a minute.</string>
+    <string name="off_error">Open Food Facts returned an error (%d)</string>
+    <string name="not_found_title">Product not found</string>
+    <string name="not_found_body">Barcode %s isn\'t on Open Food Facts. You can add it yourself (or read the label with AI) and it\'ll be saved.</string>
+    <string name="quick_add_title">Quick add</string>
+    <string name="quick_name">Name (optional)</string>
+    <string name="quick_default_name">Quick add</string>
+    <string name="prot_short">Prot.</string>
+    <string name="carbs_short">Carbs</string>
+    <string name="fat_short">Fat</string>
+    <string name="describe_title">Describe what you ate</string>
+    <string name="describe_example">E.g. \"2 beef empanadas and a small Coke\" or \"a plate of pasta with tomato sauce and grated cheese\".</string>
+    <string name="estimate">Estimate</string>
+
+    <!-- Food sheet -->
+    <string name="quantity">Quantity</string>
+    <string name="equals_grams">= %s g</string>
+    <string name="grams_chip">grams</string>
+    <string name="serving_chip">%1$s (%2$s g)</string>
+    <string name="per100_line">Per 100 g: %1$d kcal · P %2$s · C %3$s · F %4$s</string>
+    <string name="meal_label">Meal</string>
+
+    <!-- AI review -->
+    <string name="title_description">Description</string>
+    <string name="photo_cd">Photo of the meal</string>
+    <string name="analyzing">Analyzing with AI…</string>
+    <string name="analyzing_detail">Identifying foods and estimating portions.</string>
+    <string name="selected_total">Selected total</string>
+    <string name="correct_hint">Something off? Tell the AI and analyze again.</string>
+    <string name="correct_placeholder">E.g. it was half a portion, no oil</string>
+    <string name="reanalyze">Analyze again</string>
+    <plurals name="add_n_to">
+        <item quantity="one">Add %1$d to %2$s · %3$d kcal</item>
+        <item quantity="other">Add %1$d to %2$s · %3$d kcal</item>
+    </plurals>
+    <string name="low_confidence">Not sure: check the portion</string>
+    <string name="portion">Portion</string>
+    <string name="need_key">Add your Claude API key in Profile to use AI.</string>
+    <string name="need_key_label">Add your Claude API key in Profile to read labels.</string>
+    <string name="no_food_detected">No foods detected.</string>
+
+    <!-- AI errors -->
+    <string name="ai_err_key">The Claude API key isn\'t valid. Check it in Profile.</string>
+    <string name="ai_err_permission">This API key can\'t use this model.</string>
+    <string name="ai_err_rate">API usage limit reached. Try again in a while.</string>
+    <string name="ai_err_rejected">The API rejected the request: %s</string>
+    <string name="ai_err_credit">The API account has no credit.</string>
+    <string name="ai_err_status">API error (%d). Try again.</string>
+    <string name="ai_err_refusal">The model couldn\'t process this image.</string>
+    <string name="ai_err_truncated">The response was cut off. Try again.</string>
+    <string name="ai_err_unexpected">Unexpected response from the model. Try again.</string>
+
+    <!-- Create food -->
+    <string name="create_food_title">Create food</string>
+    <string name="scan_label">Scan nutrition label (AI)</string>
+    <string name="reading_label">Reading the label…</string>
+    <string name="name">Name</string>
+    <string name="brand_optional">Brand (optional)</string>
+    <string name="barcode_optional">Barcode (optional)</string>
+    <string name="serving_optional">Serving (optional)</string>
+    <string name="serving_name_hint">1 unit</string>
+    <string name="weight">Weight</string>
+    <string name="nutrition_info">Nutrition facts</string>
+    <string name="per_serving">Per serving</string>
+    <string name="default_serving">1 serving</string>
+    <string name="save_and_pick">Save and choose amount</string>
+
+    <!-- Progress -->
+    <string name="calories_7days">Calories · last 7 days</string>
+    <string name="daily_average">Daily average</string>
+    <string name="no_logs_week">No entries this week yet.</string>
+    <plurals name="avg_line">
+        <item quantity="one">%1$d kcal of %2$d · %3$d day logged</item>
+        <item quantity="other">%1$d kcal of %2$d · %3$d days logged</item>
+    </plurals>
+    <string name="weight_title">Weight</string>
+    <string name="weight_since">%1$s kg since %2$s</string>
+    <string name="todays_weight">Today\'s weight</string>
+    <string name="log_weight">Log</string>
+    <string name="weight_hint">Your latest weight updates your calorie target.</string>
+
+    <!-- Profile -->
+    <string name="daily_goal">Your daily goal</string>
+    <string name="bmr_line">Basal metabolism %1$d kcal · daily expenditure %2$d kcal</string>
+    <string name="about_you">About you</string>
+    <string name="sex_male">Male</string>
+    <string name="sex_female">Female</string>
+    <string name="age">Age</string>
+    <string name="years">yrs</string>
+    <string name="height">Height</string>
+    <string name="activity_title">Physical activity</string>
+    <string name="activity_sedentary">Sedentary</string>
+    <string name="activity_sedentary_detail">Desk job, little exercise</string>
+    <string name="activity_light">Light</string>
+    <string name="activity_light_detail">Exercise 1–3 days a week</string>
+    <string name="activity_moderate">Moderate</string>
+    <string name="activity_moderate_detail">Exercise 3–5 days a week</string>
+    <string name="activity_active">Active</string>
+    <string name="activity_active_detail">Hard exercise 6–7 days a week</string>
+    <string name="activity_very_active">Very active</string>
+    <string name="activity_very_active_detail">Physical job plus training</string>
+    <string name="goal_title">Goal</string>
+    <string name="goal_lose">Lose weight</string>
+    <string name="goal_maintain">Maintain</string>
+    <string name="goal_gain">Build muscle</string>
+    <string name="deficit_line">Deficit: %d%% of your daily expenditure</string>
+    <string name="surplus_line">Surplus: %d%% of your daily expenditure</string>
+    <string name="macro_split">Macro split</string>
+    <string name="preset_balanced">Balanced</string>
+    <string name="preset_high_protein">High protein</string>
+    <string name="preset_low_carb">Low carb</string>
+    <string name="preset_low_fat">Low fat</string>
+    <string name="preset_keto">Keto</string>
+    <string name="preset_custom">Custom</string>
+    <string name="preset_line">%1$s (P %2$d%% · C %3$d%% · F %4$d%%)</string>
+    <string name="macros_sum">Your macros add up to %d kcal.</string>
+    <string name="use_goals">Use these goals</string>
+    <string name="language">Language</string>
+    <string name="lang_system">System</string>
+    <string name="ai_section">Artificial intelligence</string>
+    <string name="ai_body">Food photos, text descriptions and label reading use Claude with your own Anthropic API key. Each analysis costs a few cents and is billed to your account.</string>
+    <string name="api_key_label">Claude API key</string>
+    <string name="show">Show</string>
+    <string name="get_key">Get a key</string>
+    <string name="ai_on">AI enabled</string>
+    <string name="ai_off">AI off: add a key to use photos and descriptions</string>
+    <string name="about">About</string>
+    <string name="about_body">No ads, no accounts, no tracking. Your entries are stored only on this phone. Packaged foods: Open Food Facts (open database, ODbL). Reference foods: approximate values per 100 g. Calorie target: Mifflin-St Jeor equation.</string>
+</resources>

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo B, tonal: fork and knife around a plate split into three macro portions. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- fork tines + neck -->
+    <path
+        android:strokeColor="#FF3D5010"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M29.5,38v8 M32,38v8 M34.5,38v8 M29.5,46q0,3 2.5,3t2.5,-3" />
+    <!-- fork handle -->
+    <path
+        android:strokeColor="#FF3D5010"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M32,49v21" />
+    <!-- knife handle -->
+    <path
+        android:strokeColor="#FF3D5010"
+        android:strokeWidth="2.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M75.2,52v18" />
+    <!-- knife blade -->
+    <path
+        android:fillColor="#FF3D5010"
+        android:pathData="M73.5,38c3.8,1.5 4.3,9 3.3,14.5h-3.3z" />
+    <!-- plate -->
+    <path
+        android:fillColor="#FF3D5010"
+        android:pathData="M38,54a16,16 0 1,0 32,0a16,16 0 1,0 -32,0" />
+    <!-- portion P -->
+    <path
+        android:fillColor="#FFE4EBC8"
+        android:fillAlpha="1"
+        android:strokeColor="#FF3D5010"
+        android:strokeWidth="1.6"
+        android:pathData="M54,54L54,43A11,11 0 0,1 63.53,59.5Z" />
+    <!-- portion C -->
+    <path
+        android:fillColor="#FFE4EBC8"
+        android:fillAlpha="0.7"
+        android:strokeColor="#FF3D5010"
+        android:strokeWidth="1.6"
+        android:pathData="M54,54L63.53,59.5A11,11 0 0,1 44.47,59.5Z" />
+    <!-- portion G -->
+    <path
+        android:fillColor="#FFE4EBC8"
+        android:fillAlpha="0.45"
+        android:strokeColor="#FF3D5010"
+        android:strokeWidth="1.6"
+        android:pathData="M54,54L44.47,59.5A11,11 0 0,1 54,43Z" />
+</vector>

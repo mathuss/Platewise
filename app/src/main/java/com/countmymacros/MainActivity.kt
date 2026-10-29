@@ -36,7 +36,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.countmymacros.ui.AddFoodScreen
-import com.countmymacros.ui.AiReviewScreen
 import com.countmymacros.ui.AppLanguage
 import com.countmymacros.ui.AppViewModel
 import com.countmymacros.ui.CreateFoodScreen
@@ -88,7 +87,6 @@ private fun App(vm: AppViewModel) {
 
     when (val top = vm.stack.lastOrNull()) {
         is Screen.AddFood -> AddFoodScreen(vm, top.meal)
-        is Screen.AiReview -> AiReviewScreen(vm, top.meal)
         is Screen.CreateFood -> CreateFoodScreen(vm, top.meal, top.barcode)
         null -> Scaffold(
             snackbarHost = { SnackbarHost(snackbar) },

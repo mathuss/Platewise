@@ -1,10 +1,10 @@
 package com.countmymacros.ui
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,25 +12,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -83,21 +77,17 @@ private sealed interface Online {
     data class Failed(val message: UiText) : Online
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
     var meal by remember { mutableStateOf(initialMeal) }
     var query by remember { mutableStateOf("") }
     var online by remember { mutableStateOf<Online>(Online.Idle) }
-    var photoMenu by remember { mutableStateOf(false) }
     var quickDialog by remember { mutableStateOf(false) }
-    var describeDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val context = LocalContext.current
-
-    val photos = rememberPhotoSource(onJpeg = { vm.analyzePhoto(it, meal) }, onError = { vm.toast = it })
 
     // Re-read after anything is logged or saved so recents/my foods stay current.
     // (The lint suppressions are for a K2 false positive: these lambdas do assign `value`.)
@@ -183,38 +173,14 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
                         keyboardActions = KeyboardActions(onSearch = { searchOnline() }),
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     )
-                    Row(
-                        Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 8.dp),
+                    FlowRow(
+                        Modifier.padding(vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Box {
-                            AssistChip(
-                                onClick = { photoMenu = true },
-                                label = { Text(stringResource(R.string.chip_photo)) },
-                                leadingIcon = { Icon(Icons.Filled.CameraAlt, null, Modifier.size(18.dp)) },
-                            )
-                            DropdownMenu(expanded = photoMenu, onDismissRequest = { photoMenu = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.take_photo)) },
-                                    leadingIcon = { Icon(Icons.Filled.CameraAlt, null) },
-                                    onClick = { photoMenu = false; photos.takePhoto() },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.pick_gallery)) },
-                                    leadingIcon = { Icon(Icons.Filled.PhotoLibrary, null) },
-                                    onClick = { photoMenu = false; photos.pickFromGallery() },
-                                )
-                            }
-                        }
                         AssistChip(
                             onClick = ::scanBarcode,
                             label = { Text(stringResource(R.string.chip_barcode)) },
                             leadingIcon = { Icon(Icons.Filled.QrCodeScanner, null, Modifier.size(18.dp)) },
-                        )
-                        AssistChip(
-                            onClick = { describeDialog = true },
-                            label = { Text(stringResource(R.string.chip_describe)) },
-                            leadingIcon = { Icon(Icons.Filled.AutoAwesome, null, Modifier.size(18.dp)) },
                         )
                         AssistChip(
                             onClick = { quickDialog = true },
@@ -279,7 +245,7 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
                             is Online.Failed -> Text(o.message.text(), color = MaterialTheme.colorScheme.error)
                             is Online.Done -> if (o.foods.isEmpty()) {
                                 Text(stringResource(R.string.no_off_results))
-                                TextButton(onClick = { describeDialog = true }) { Text(stringResource(R.string.estimate_with_ai)) }
+                                TextButton(onClick = { vm.push(Screen.CreateFood(meal)) }) { Text(stringResource(R.string.chip_create)) }
                             } else Header(stringResource(R.string.source_off), inset = false)
                         }
                     }
@@ -294,12 +260,6 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
         QuickAddDialog(onDismiss = { quickDialog = false }) { name, macros ->
             quickDialog = false
             vm.quickAdd(meal, name, macros)
-        }
-    }
-    if (describeDialog) {
-        DescribeDialog(initial = query, onDismiss = { describeDialog = false }) { text ->
-            describeDialog = false
-            vm.analyzeText(text, meal)
         }
     }
     vm.barcodeMissing?.let { code ->
@@ -408,35 +368,6 @@ private fun QuickAddDialog(onDismiss: () -> Unit, onAdd: (String, Macros) -> Uni
             TextButton(onClick = { onAdd(name.ifBlank { defaultName }, Macros(calories, protein, carbs, fat)) }, enabled = calories > 0) {
                 Text(stringResource(R.string.add))
             }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
-}
-
-/** Text → foods with AI, like Fitia's "Senku" text recognition. */
-@Composable
-private fun DescribeDialog(initial: String, onDismiss: () -> Unit, onSend: (String) -> Unit) {
-    var text by remember { mutableStateOf(initial) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.describe_title)) },
-        text = {
-            Column {
-                Text(
-                    stringResource(R.string.describe_example),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    minLines = 3,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSend(text.trim()) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.estimate)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )

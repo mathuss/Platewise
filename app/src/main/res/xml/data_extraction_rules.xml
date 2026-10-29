@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12+. The diary and settings are backed up / transferred; the API key is not. -->
+<!-- Android 12+. The diary and settings are backed up / transferred; secrets.xml (where older versions kept an API key) is not. -->
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="secrets.xml" />

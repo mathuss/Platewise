@@ -18,7 +18,7 @@ android {
 
     defaultConfig {
         applicationId = "com.countmymacros"
-        minSdk = 28 // ImageDecoder (applies EXIF rotation when downscaling photos)
+        minSdk = 28
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -70,8 +70,6 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
-            excludes += "/META-INF/DEPENDENCIES"
-            excludes += "/META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
     }
 }
@@ -93,14 +91,10 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
 
-    // Claude API (photo / label / text → macros). Official Java SDK, used from Kotlin.
-    implementation("com.anthropic:anthropic-java:2.34.0")
-
     // Barcode scanning UI provided by Google Play services: no camera permission, tiny footprint.
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("org.json:json:20240303") // real org.json on the JVM (Android's is a stub)
 
     debugImplementation("androidx.compose.ui:ui-tooling")

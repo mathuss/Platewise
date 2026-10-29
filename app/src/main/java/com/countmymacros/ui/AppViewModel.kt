@@ -9,15 +9,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.countmymacros.R
-import com.countmymacros.data.AiException
-import com.countmymacros.data.AiLabel
-import com.countmymacros.data.AiMeal
 import com.countmymacros.data.Entry
 import com.countmymacros.data.Food
-import com.countmymacros.data.FoodAi
-import com.countmymacros.data.FoodSearch
 import com.countmymacros.data.FoodSource
-import com.countmymacros.data.GRAMS
 import com.countmymacros.data.Goals
 import com.countmymacros.data.Lang
 import com.countmymacros.data.Macros
@@ -29,18 +23,15 @@ import com.countmymacros.data.Serving
 import com.countmymacros.data.Targets
 import com.countmymacros.data.Weight
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.time.LocalDate
-import java.time.LocalTime
 import java.util.UUID
 
 /** Full-screen pages pushed over the tabs. */
 sealed interface Screen {
     data class AddFood(val meal: Meal) : Screen
-    data class AiReview(val meal: Meal) : Screen
     data class CreateFood(val meal: Meal, val barcode: String? = null) : Screen
 }
 
@@ -55,20 +46,8 @@ data class FoodSheet(
     val preset: Pair<Serving, Double>? = null,
 )
 
-/** One AI-detected item while the user reviews it. Macros scale with [grams]. */
-data class ReviewItem(
-    val name: String,
-    val grams: Double,
-    val per100: Macros,
-    val confidence: String,
-    val selected: Boolean = true,
-) {
-    val macros: Macros get() = per100.scaled(grams / 100.0)
-}
-
 /** Maps any failure to something the user can read. */
 fun errorText(e: Throwable): UiText = when (e) {
-    is AiException -> UiText.Res(e.messageRes, listOfNotNull(e.arg))
     is OffException -> UiText.Res(e.messageRes, listOfNotNull(e.arg))
     is IOException -> uiText(R.string.offline)
     else -> uiText(R.string.generic_error, e.message ?: e.javaClass.simpleName)
@@ -92,24 +71,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var sheet by mutableStateOf<FoodSheet?>(null)
     var toast by mutableStateOf<UiText?>(null)
 
-    // --- AI meal review (photo or text) ---
-    var aiImage by mutableStateOf<ByteArray?>(null); private set
-    var aiText by mutableStateOf<String?>(null); private set
-    var aiLoading by mutableStateOf(false); private set
-    var aiError by mutableStateOf<UiText?>(null); private set
-    var aiNotes by mutableStateOf(""); private set
-    val aiItems = mutableStateListOf<ReviewItem>()
-    private var aiJob: Job? = null
-
-    // --- nutrition label scan (create food) ---
-    var labelLoading by mutableStateOf(false); private set
-    var labelResult by mutableStateOf<AiLabel?>(null)
-    var labelError by mutableStateOf<UiText?>(null)
-
-    var apiKey by mutableStateOf(repo.prefs.apiKey); private set
-    val hasApiKey: Boolean get() = apiKey.isNotBlank()
-    private var ai: FoodAi? = null
-
     init {
         reload()
     }
@@ -126,31 +87,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         reload()
     }
 
-    /** The meal that fits the current time of day, like Fitia's per-country meal hours. */
-    fun mealForNow(): Meal {
-        val t = LocalTime.now()
-        return when {
-            t < LocalTime.of(10, 0) -> Meal.BREAKFAST
-            t < LocalTime.of(12, 0) -> Meal.MID_MORNING
-            t < LocalTime.of(16, 0) -> Meal.LUNCH
-            t < LocalTime.of(20, 0) -> Meal.SNACK
-            else -> Meal.DINNER
-        }
-    }
-
     fun push(s: Screen) {
-        if (s is Screen.CreateFood) {
-            labelResult = null
-            labelError = null
-        }
         stack.add(s)
     }
 
     fun pop() {
         if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex)
     }
-
-    fun closeAll() = stack.clear()
 
     // --- entries ---
 
@@ -225,118 +168,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun saveApiKey(key: String) {
-        repo.prefs.apiKey = key
-        apiKey = key.trim()
-        ai = null
-    }
-
-    private fun aiClient(): FoodAi =
-        ai ?: FoodAi(apiKey).also { ai = it }
-
-    // --- AI meal estimation ---
-
-    fun analyzePhoto(jpeg: ByteArray, meal: Meal) {
-        aiImage = jpeg
-        aiText = null
-        if (stack.lastOrNull() !is Screen.AiReview) push(Screen.AiReview(meal))
-        val lang = Lang.current
-        runAi { aiClient().estimatePhoto(jpeg, lang = lang) }
-    }
-
-    fun analyzeText(text: String, meal: Meal) {
-        aiImage = null
-        aiText = text
-        if (stack.lastOrNull() !is Screen.AiReview) push(Screen.AiReview(meal))
-        val lang = Lang.current
-        runAi { aiClient().estimateText(text, lang) }
-    }
-
-    /** Re-run with a correction from the user ("half a portion", "no oil"). */
-    fun reanalyze(note: String) {
-        val image = aiImage
-        val text = aiText
-        val lang = Lang.current
-        when {
-            image != null -> runAi { aiClient().estimatePhoto(image, note, lang) }
-            text != null -> runAi { aiClient().estimateText(if (note.isBlank()) text else "$text. $note", lang) }
-        }
-    }
-
-    private fun runAi(call: () -> AiMeal) {
-        aiJob?.cancel()
-        aiItems.clear()
-        aiNotes = ""
-        aiError = null
-        if (!hasApiKey) {
-            aiError = uiText(R.string.need_key)
-            return
-        }
-        aiLoading = true
-        aiJob = viewModelScope.launch {
-            try {
-                val meal = withContext(Dispatchers.IO) { call() }
-                aiNotes = meal.notes
-                aiItems.addAll(meal.items.map {
-                    val grams = if (it.grams > 0) it.grams else 100.0
-                    ReviewItem(it.name, grams, it.macros.scaled(100.0 / grams), it.confidence)
-                })
-                if (meal.items.isEmpty() && meal.notes.isBlank()) aiError = uiText(R.string.no_food_detected)
-            } catch (e: Exception) {
-                aiError = errorText(e)
-            } finally {
-                aiLoading = false
-            }
-        }
-    }
-
-    fun addReviewed(meal: Meal) {
-        val chosen = aiItems.filter { it.selected && it.grams > 0 }
-        val now = System.currentTimeMillis()
-        io {
-            chosen.forEachIndexed { i, it ->
-                repo.add(
-                    Entry(
-                        date = date.toString(),
-                        meal = meal,
-                        foodKey = aiKey(it.name),
-                        name = it.name,
-                        per100 = it.per100,
-                        servingName = GRAMS.name,
-                        servingGrams = GRAMS.grams,
-                        quantity = it.grams,
-                        source = FoodSource.AI,
-                        createdAt = now + i,
-                    )
-                )
-            }
-        }
-        toast = UiText.Plural(R.plurals.toast_added_n, chosen.size, listOf(chosen.size, uiText(meal.label)))
-        closeAll()
-    }
-
-    // --- nutrition label ---
-
-    fun scanLabel(jpeg: ByteArray) {
-        labelError = null
-        labelResult = null
-        if (!hasApiKey) {
-            labelError = uiText(R.string.need_key_label)
-            return
-        }
-        labelLoading = true
-        val lang = Lang.current
-        viewModelScope.launch {
-            try {
-                labelResult = withContext(Dispatchers.IO) { aiClient().readLabel(jpeg, lang) }
-            } catch (e: Exception) {
-                labelError = errorText(e)
-            } finally {
-                labelLoading = false
-            }
-        }
-    }
-
     fun saveCustomFood(food: Food, meal: Meal) {
         viewModelScope.launch {
             withContext(Dispatchers.IO) { repo.saveFood(food) }
@@ -399,6 +230,3 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 }
-
-/** AI items group in "Recent" by normalized name. */
-private fun aiKey(name: String) = "ai:" + FoodSearch.normalize(name).replace(Regex("[^a-z0-9]+"), "-")

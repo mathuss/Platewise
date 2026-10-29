@@ -2,18 +2,13 @@ package com.countmymacros.data
 
 import android.content.Context
 
-/** Profile/goals in plain prefs; the API key in its own file, excluded from cloud backup. */
+/** Profile, goals and the in-app language, in plain prefs. */
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-    private val secrets = context.getSharedPreferences("secrets", Context.MODE_PRIVATE)
 
     var profileSet: Boolean
         get() = sp.getBoolean("profile_set", false)
         set(v) = sp.edit().putBoolean("profile_set", v).apply()
-
-    var apiKey: String
-        get() = secrets.getString("anthropic_api_key", "") ?: ""
-        set(v) = secrets.edit().putString("anthropic_api_key", v.trim()).apply()
 
     /** In-app language before Android 13 ("" = follow the system). Android 13+ stores it itself. */
     var language: String

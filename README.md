@@ -8,16 +8,11 @@ del APK original ([docs/ANALISIS_FITIA.md](docs/ANALISIS_FITIA.md)).
 
 - **Diario** por día con las 5 comidas de Fitia (Desayuno, Media mañana, Almuerzo,
   Merienda, Cena): anillo de calorías restantes y barras de P / C / G contra tu objetivo.
-- **Foto de comida**: le sacás una foto al plato (o elegís una de la galería) y la IA
-  separa cada alimento, estima los gramos y calcula kcal y macros. Revisás, corregís los
-  gramos (los macros se recalculan) y lo agregás. Si algo está mal, le escribís una nota
-  ("era media porción", "sin aceite") y reanaliza.
-- **Describir**: "2 empanadas de carne y una coca chica" → alimentos con macros.
 - **Código de barras**: escaneo con el lector de Google y datos de Open Food Facts. Si el
-  producto no está, lo creás (a mano o leyendo la etiqueta con IA) y queda guardado.
+  producto no está, lo creás a mano y queda guardado.
 - **Buscador**: base local de ~135 alimentos comunes (al instante, sin internet) + búsqueda
   en Open Food Facts. Acepta tildes o no y nombres alternativos (palta/aguacate, etc.).
-- **Crear alimento** por 100 g o por porción, o **escaneando la etiqueta nutricional**.
+- **Crear alimento** por 100 g o por porción.
 - **Agregar rápido** (solo kcal y macros), **Copiar de ayer** por comida, **Recientes** con
   la última cantidad usada.
 - **Objetivos**: sexo, edad, altura, peso, actividad, objetivo (bajar / mantener / ganar,
@@ -25,28 +20,14 @@ del APK original ([docs/ANALISIS_FITIA.md](docs/ANALISIS_FITIA.md)).
   baja en carbos, baja en grasas, keto o personalizada).
 - **Progreso**: calorías de los últimos 7 días, promedio de macros y registro de peso.
 - **Inglés o español**: sigue el idioma del teléfono, o se elige en **Perfil → Idioma**
-  (Sistema / English / Español; en Android 13+ también desde Ajustes del sistema). La IA
-  nombra los alimentos en ese idioma, Open Food Facts usa el nombre del producto en ese
-  idioma y la base local tiene ambos nombres (buscás "pollo" o "chicken" y aparece igual).
+  (Sistema / English / Español; en Android 13+ también desde Ajustes del sistema). Open
+  Food Facts usa el nombre del producto en ese idioma y la base local tiene ambos nombres (buscás "pollo" o "chicken" y aparece igual).
   Lo ya registrado queda con el nombre que tenía.
 
 Sin anuncios, sin cuentas, sin analítica, sin suscripción. Los datos quedan en el teléfono
-(SQLite). Permisos: solo internet; ni cámara ni almacenamiento, porque las fotos pasan por
-la app de cámara y el selector de fotos del sistema. El APK pesa **~9 MB** contra los
-144 MB de Fitia.
-
-## La IA (foto, descripción y etiquetas)
-
-Usa **Claude** (`claude-opus-5-5`) con tu propia API key de Anthropic:
-
-1. Creá una key en <https://console.anthropic.com/settings/keys> y cargale crédito.
-2. En la app: **Perfil → Inteligencia artificial → pegar la key → Guardar**.
-
-Cada análisis cuesta unos centavos de dólar (estimado: 2–5 ¢ por foto) y se cobra en tu
-cuenta. La key se guarda solo en el teléfono y se excluye de los backups en la nube.
-Las solicitudes van con *fallback* del lado del servidor (`fallbacks: "default"`): si un
-filtro de seguridad rechazara una imagen, Anthropic la reintenta en otro modelo.
-El buscador, el código de barras y todo lo demás funcionan sin key.
+(SQLite). Sin IA ni API keys: nada sale del teléfono salvo las consultas a Open Food Facts.
+Permisos: solo internet; el lector de códigos de Google no necesita permiso de cámara. El APK
+pesa **~3 MB** contra los 144 MB de Fitia.
 
 ## Cómo compilar
 
@@ -94,14 +75,12 @@ app/src/main/java/com/countmymacros/
     Models.kt              Food, Serving, Entry, Macros, Meal
     Db.kt                  SQLite: entradas, mis alimentos, peso
     Repo.kt                base local + DB + Open Food Facts
-    FoodAi.kt              Claude: foto, texto y etiqueta → JSON con esquema
     OpenFoodFacts.kt       código de barras y búsqueda
     Goals.kt               BMR/TDEE, objetivo y distribución de macros
     FoodSearch.kt          búsqueda local sin tildes
-    Prefs.kt               perfil y API key
+    Prefs.kt               perfil e idioma
   ui/                      pantallas Compose
-app/src/test/              tests (cálculos, búsqueda, parsers y el request a Claude
-                           contra un servidor local, sin gastar crédito)
+app/src/test/              tests (cálculos, búsqueda y parser de Open Food Facts)
 ```
 
 ## Estado
@@ -110,10 +89,10 @@ app/src/test/              tests (cálculos, búsqueda, parsers y el request a C
 launcher con el logo B tonal (tenedor, plato en tres porciones y cuchillo), fondo `#E4EBC8` y
 figura `#3D5010`, con capa monocroma para los íconos temáticos de Android 13+.
 
-Compila (debug y release minificado), pasan los 12 tests y lint queda sin advertencias. El
-request a Claude se probó de punta a punta con el SDK real contra un servidor local.
+Compila (debug y release minificado), pasan los 7 tests y lint queda sin advertencias. Se
+quitaron la foto de comida, "Describir" y la lectura de etiquetas con IA (Claude), que
+necesitaban una API key propia.
 
-Probado en un Galaxy A55 (Android 16) por adb, en la versión solo en español: búsqueda
-local y en Open Food Facts, agregar, editar, agregar rápido, copiar de ayer y el aviso de
-API key faltante. Falta probar en el teléfono: la versión bilingüe, Perfil, Progreso, el
-escáner de códigos y la foto con IA.
+Probado en un Galaxy A55 (Android 16) por adb, en español e inglés y en claro y oscuro:
+búsqueda local y en Open Food Facts, agregar, editar, borrar, agregar rápido, copiar de
+ayer, Perfil y Progreso. Falta probar en el teléfono el escáner de códigos.

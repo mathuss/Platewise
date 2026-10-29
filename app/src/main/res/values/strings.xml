@@ -12,7 +12,6 @@
     <string name="save">Save</string>
     <string name="delete">Delete</string>
     <string name="clear">Clear</string>
-    <string name="retry">Retry</string>
     <string name="more_options">More options</string>
     <string name="offline">No connection. Check your internet and try again.</string>
     <string name="generic_error">Something went wrong: %s</string>
@@ -57,9 +56,6 @@
     <string name="setup_goals_body">We use your weight, height and activity to work out your calories and macros.</string>
     <string name="add_to_meal">Add to %s</string>
     <string name="copy_yesterday">Copy from yesterday</string>
-    <string name="food_photo">Food photo</string>
-    <string name="take_photo">Take photo</string>
-    <string name="pick_gallery">Choose from gallery</string>
     <string name="amount_grams">%s g</string>
     <string name="amount_servings">%1$s × %2$s (%3$s g)</string>
     <string name="amount_quick">%s × serving</string>
@@ -71,53 +67,40 @@
     <!-- Messages -->
     <string name="toast_added">%1$s added to %2$s</string>
     <string name="toast_added_meal">Added to %s</string>
-    <plurals name="toast_added_n">
-        <item quantity="one">Added %1$d food to %2$s</item>
-        <item quantity="other">Added %1$d foods to %2$s</item>
-    </plurals>
     <plurals name="toast_copied">
         <item quantity="one">Copied %d food from yesterday</item>
         <item quantity="other">Copied %d foods from yesterday</item>
     </plurals>
     <string name="toast_nothing_yesterday">Nothing was logged in %s yesterday</string>
-    <string name="toast_api_key_saved">API key saved</string>
-    <string name="toast_photo_error">Couldn\'t read the photo</string>
-    <string name="toast_no_camera">No camera app available</string>
     <string name="toast_scanner_error">Couldn\'t open the barcode scanner</string>
 
     <!-- Add food -->
     <string name="add_food_title">Add food</string>
     <string name="search_hint">Search: chicken, rice, yogurt…</string>
-    <string name="chip_photo">Photo</string>
     <string name="chip_barcode">Barcode</string>
-    <string name="chip_describe">Describe</string>
     <string name="chip_quick">Quick add</string>
     <string name="chip_create">Create food</string>
     <string name="looking_up_product">Looking up the product…</string>
     <string name="recents">Recent</string>
     <string name="my_foods">My foods</string>
-    <string name="empty_add_hint">Search for a food, scan a barcode or take a photo of your plate.</string>
+    <string name="empty_add_hint">Search for a food or scan a barcode.</string>
     <string name="search_off">Search \"%s\" on Open Food Facts</string>
     <string name="more_off">More results on Open Food Facts</string>
     <string name="searching_off">Searching Open Food Facts…</string>
     <string name="no_off_results">No results on Open Food Facts.</string>
-    <string name="estimate_with_ai">Estimate it with AI</string>
     <string name="per_100g">Per 100 g</string>
     <string name="kcal_per_100">%d kcal/100 g</string>
     <string name="remove_from_my_foods">Remove from my foods</string>
     <string name="off_rate_limited">Open Food Facts is limiting searches. Wait a minute.</string>
     <string name="off_error">Open Food Facts returned an error (%d)</string>
     <string name="not_found_title">Product not found</string>
-    <string name="not_found_body">Barcode %s isn\'t on Open Food Facts. You can add it yourself (or read the label with AI) and it\'ll be saved.</string>
+    <string name="not_found_body">Barcode %s isn\'t on Open Food Facts. You can add it yourself and it\'ll be saved.</string>
     <string name="quick_add_title">Quick add</string>
     <string name="quick_name">Name (optional)</string>
     <string name="quick_default_name">Quick add</string>
     <string name="prot_short">Prot.</string>
     <string name="carbs_short">Carbs</string>
     <string name="fat_short">Fat</string>
-    <string name="describe_title">Describe what you ate</string>
-    <string name="describe_example">E.g. \"2 beef empanadas and a small Coke\" or \"a plate of pasta with tomato sauce and grated cheese\".</string>
-    <string name="estimate">Estimate</string>
 
     <!-- Food sheet -->
     <string name="quantity">Quantity</string>
@@ -127,40 +110,8 @@
     <string name="per100_line">Per 100 g: %1$d kcal · P %2$s · C %3$s · F %4$s</string>
     <string name="meal_label">Meal</string>
 
-    <!-- AI review -->
-    <string name="title_description">Description</string>
-    <string name="photo_cd">Photo of the meal</string>
-    <string name="analyzing">Analyzing with AI…</string>
-    <string name="analyzing_detail">Identifying foods and estimating portions.</string>
-    <string name="selected_total">Selected total</string>
-    <string name="correct_hint">Something off? Tell the AI and analyze again.</string>
-    <string name="correct_placeholder">E.g. it was half a portion, no oil</string>
-    <string name="reanalyze">Analyze again</string>
-    <plurals name="add_n_to">
-        <item quantity="one">Add %1$d to %2$s · %3$d kcal</item>
-        <item quantity="other">Add %1$d to %2$s · %3$d kcal</item>
-    </plurals>
-    <string name="low_confidence">Not sure: check the portion</string>
-    <string name="portion">Portion</string>
-    <string name="need_key">Add your Claude API key in Profile to use AI.</string>
-    <string name="need_key_label">Add your Claude API key in Profile to read labels.</string>
-    <string name="no_food_detected">No foods detected.</string>
-
-    <!-- AI errors -->
-    <string name="ai_err_key">The Claude API key isn\'t valid. Check it in Profile.</string>
-    <string name="ai_err_permission">This API key can\'t use this model.</string>
-    <string name="ai_err_rate">API usage limit reached. Try again in a while.</string>
-    <string name="ai_err_rejected">The API rejected the request: %s</string>
-    <string name="ai_err_credit">The API account has no credit.</string>
-    <string name="ai_err_status">API error (%d). Try again.</string>
-    <string name="ai_err_refusal">The model couldn\'t process this image.</string>
-    <string name="ai_err_truncated">The response was cut off. Try again.</string>
-    <string name="ai_err_unexpected">Unexpected response from the model. Try again.</string>
-
     <!-- Create food -->
     <string name="create_food_title">Create food</string>
-    <string name="scan_label">Scan nutrition label (AI)</string>
-    <string name="reading_label">Reading the label…</string>
     <string name="name">Name</string>
     <string name="brand_optional">Brand (optional)</string>
     <string name="barcode_optional">Barcode (optional)</string>
@@ -224,13 +175,6 @@
     <string name="use_goals">Use these goals</string>
     <string name="language">Language</string>
     <string name="lang_system">System</string>
-    <string name="ai_section">Artificial intelligence</string>
-    <string name="ai_body">Food photos, text descriptions and label reading use Claude with your own Anthropic API key. Each analysis costs a few cents and is billed to your account.</string>
-    <string name="api_key_label">Claude API key</string>
-    <string name="show">Show</string>
-    <string name="get_key">Get a key</string>
-    <string name="ai_on">AI enabled</string>
-    <string name="ai_off">AI off: add a key to use photos and descriptions</string>
     <string name="about">About</string>
     <string name="about_body">No ads, no accounts, no tracking. Your entries are stored only on this phone. Packaged foods: Open Food Facts (open database, ODbL). Reference foods: approximate values per 100 g. Calorie target: Mifflin-St Jeor equation.</string>
 </resources>

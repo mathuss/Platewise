@@ -20,25 +20,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,13 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.countmymacros.R
 import com.countmymacros.data.Activity as ActivityLevel
@@ -209,9 +199,6 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
         SectionTitle(stringResource(R.string.language))
         LanguagePicker()
 
-        SectionTitle(stringResource(R.string.ai_section))
-        ApiKeyCard(vm)
-
         SectionTitle(stringResource(R.string.about))
         BrandRow()
         Text(
@@ -309,45 +296,4 @@ private fun appVersionName(context: Context): String {
         pm.getPackageInfo(context.packageName, 0).versionName
     }
     return versionName ?: ""
-}
-
-@Composable
-private fun ApiKeyCard(vm: AppViewModel) {
-    var key by remember { mutableStateOf(vm.apiKey) }
-    var visible by remember { mutableStateOf(false) }
-    val uri = LocalUriHandler.current
-    Card {
-        Column(Modifier.padding(16.dp)) {
-            Text(stringResource(R.string.ai_body), style = MaterialTheme.typography.bodySmall)
-            OutlinedTextField(
-                value = key,
-                onValueChange = { key = it },
-                label = { Text(stringResource(R.string.api_key_label)) },
-                placeholder = { Text("sk-ant-…") },
-                singleLine = true,
-                visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
-                    IconButton(onClick = { visible = !visible }) {
-                        Icon(if (visible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility, stringResource(R.string.show))
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            )
-            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = { vm.saveApiKey(key); vm.toast = uiText(R.string.toast_api_key_saved) },
-                    enabled = key.trim() != vm.apiKey,
-                ) { Text(stringResource(R.string.save)) }
-                TextButton(onClick = { uri.openUri("https://console.anthropic.com/settings/keys") }) {
-                    Text(stringResource(R.string.get_key))
-                }
-            }
-            Text(
-                stringResource(if (vm.hasApiKey) R.string.ai_on else R.string.ai_off),
-                style = MaterialTheme.typography.labelMedium,
-                color = if (vm.hasApiKey) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-    }
 }

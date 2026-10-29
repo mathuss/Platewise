@@ -13,9 +13,12 @@ import com.countmymacros.data.Entry
 import com.countmymacros.data.Food
 import com.countmymacros.data.FoodSource
 import com.countmymacros.data.Goals
+import com.countmymacros.data.LabelResult
+import com.countmymacros.data.LabelText
 import com.countmymacros.data.Lang
 import com.countmymacros.data.Macros
 import com.countmymacros.data.Meal
+import com.countmymacros.data.MealText
 import com.countmymacros.data.OffException
 import com.countmymacros.data.Profile
 import com.countmymacros.data.Repo
@@ -32,6 +35,7 @@ import java.util.UUID
 /** Full-screen pages pushed over the tabs. */
 sealed interface Screen {
     data class AddFood(val meal: Meal) : Screen
+    data class Describe(val meal: Meal) : Screen
     data class CreateFood(val meal: Meal, val barcode: String? = null) : Screen
 }
 
@@ -44,6 +48,15 @@ data class FoodSheet(
     val meal: Meal,
     val entry: Entry? = null,
     val preset: Pair<Serving, Double>? = null,
+)
+
+/** One item [MealText] recognized from the description, while the user reviews it. */
+data class DescribeItem(
+    val food: Food,
+    val serving: Serving,
+    val quantity: Double,
+    val alternatives: List<Food>,
+    val selected: Boolean = true,
 )
 
 /** Maps any failure to something the user can read. */
@@ -88,6 +101,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun push(s: Screen) {
+        if (s is Screen.CreateFood) {
+            labelResult = null
+            labelError = null
+        }
         stack.add(s)
     }
 
@@ -175,6 +192,73 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         pop()
         sheet = FoodSheet(food, meal)
+    }
+
+    // --- describe (free text, no AI: MealText + the local catalog) ---
+
+    val describeItems = mutableStateListOf<DescribeItem>()
+    var describeText by mutableStateOf(""); private set
+    var describeUnmatched by mutableStateOf<List<String>>(emptyList()); private set
+
+    fun describe(text: String, meal: Meal) {
+        describeItems.clear()
+        describeText = text
+        describeUnmatched = emptyList()
+        push(Screen.Describe(meal))
+        val lang = Lang.current
+        viewModelScope.launch {
+            val parsed = withContext(Dispatchers.IO) { MealText.parse(text, repo.localFoods(lang)) }
+            describeItems.addAll(parsed.items.map { DescribeItem(it.food, it.serving, it.quantity, it.alternatives) })
+            describeUnmatched = parsed.unmatched
+        }
+    }
+
+    fun addDescribed(meal: Meal) {
+        val chosen = describeItems.filter { it.selected && it.quantity > 0 }
+        val now = System.currentTimeMillis()
+        io {
+            chosen.forEachIndexed { i, d ->
+                repo.add(
+                    Entry(
+                        date = date.toString(),
+                        meal = meal,
+                        foodKey = d.food.key,
+                        name = d.food.name,
+                        brand = d.food.brand,
+                        per100 = d.food.per100,
+                        servingName = d.serving.name,
+                        servingGrams = d.serving.grams,
+                        quantity = d.quantity,
+                        source = d.food.source,
+                        createdAt = now + i,
+                    )
+                )
+            }
+        }
+        toast = UiText.Plural(R.plurals.toast_added_n, chosen.size, listOf(chosen.size, uiText(meal.label)))
+        stack.clear()
+    }
+
+    // --- nutrition label (OCR, no AI: ML Kit text recognition + LabelText rules) ---
+
+    var labelLoading by mutableStateOf(false); private set
+    var labelResult by mutableStateOf<LabelResult?>(null)
+    var labelError by mutableStateOf<UiText?>(null)
+
+    fun scanLabel(jpeg: ByteArray) {
+        labelError = null
+        labelResult = null
+        labelLoading = true
+        viewModelScope.launch {
+            try {
+                val lines = withContext(Dispatchers.IO) { readLabelLines(jpeg) }
+                labelResult = LabelText.parse(lines) ?: run { labelError = uiText(R.string.label_failed); null }
+            } catch (e: Exception) {
+                labelError = errorText(e)
+            } finally {
+                labelLoading = false
+            }
+        }
     }
 
     // --- barcode ---

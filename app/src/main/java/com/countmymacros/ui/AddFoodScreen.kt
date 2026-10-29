@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ShortText
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -84,6 +85,7 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
     var query by remember { mutableStateOf("") }
     var online by remember { mutableStateOf<Online>(Online.Idle) }
     var quickDialog by remember { mutableStateOf(false) }
+    var describeDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -183,6 +185,11 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
                             leadingIcon = { Icon(Icons.Filled.QrCodeScanner, null, Modifier.size(18.dp)) },
                         )
                         AssistChip(
+                            onClick = { describeDialog = true },
+                            label = { Text(stringResource(R.string.chip_describe)) },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.ShortText, null, Modifier.size(18.dp)) },
+                        )
+                        AssistChip(
                             onClick = { quickDialog = true },
                             label = { Text(stringResource(R.string.chip_quick)) },
                             leadingIcon = { Icon(Icons.Filled.Bolt, null, Modifier.size(18.dp)) },
@@ -260,6 +267,12 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
         QuickAddDialog(onDismiss = { quickDialog = false }) { name, macros ->
             quickDialog = false
             vm.quickAdd(meal, name, macros)
+        }
+    }
+    if (describeDialog) {
+        DescribeDialog(onDismiss = { describeDialog = false }) { text ->
+            describeDialog = false
+            vm.describe(text, meal)
         }
     }
     vm.barcodeMissing?.let { code ->
@@ -368,6 +381,35 @@ private fun QuickAddDialog(onDismiss: () -> Unit, onAdd: (String, Macros) -> Uni
             TextButton(onClick = { onAdd(name.ifBlank { defaultName }, Macros(calories, protein, carbs, fat)) }, enabled = calories > 0) {
                 Text(stringResource(R.string.add))
             }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
+}
+
+/** Free text → foods from the local catalog, matched by rules (no AI; see MealText). */
+@Composable
+private fun DescribeDialog(onDismiss: () -> Unit, onSend: (String) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.describe_title)) },
+        text = {
+            Column {
+                Text(
+                    stringResource(R.string.describe_example),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSend(text.trim()) }, enabled = text.isNotBlank()) { Text(stringResource(R.string.describe_go)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )

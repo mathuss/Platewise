@@ -39,6 +39,7 @@ import com.countmymacros.ui.AddFoodScreen
 import com.countmymacros.ui.AppLanguage
 import com.countmymacros.ui.AppViewModel
 import com.countmymacros.ui.CreateFoodScreen
+import com.countmymacros.ui.DescribeScreen
 import com.countmymacros.ui.DiaryScreen
 import com.countmymacros.ui.FoodSheetHost
 import com.countmymacros.ui.ProfileScreen
@@ -87,6 +88,7 @@ private fun App(vm: AppViewModel) {
 
     when (val top = vm.stack.lastOrNull()) {
         is Screen.AddFood -> AddFoodScreen(vm, top.meal)
+        is Screen.Describe -> DescribeScreen(vm, top.meal)
         is Screen.CreateFood -> CreateFoodScreen(vm, top.meal, top.barcode)
         null -> Scaffold(
             snackbarHost = { SnackbarHost(snackbar) },

@@ -94,6 +94,10 @@ dependencies {
     // Barcode scanning UI provided by Google Play services: no camera permission, tiny footprint.
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
 
+    // On-device OCR for nutrition labels: the recognizer model downloads via Play services,
+    // not bundled in the APK. No key, no network call, no cost.
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.1")
+
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303") // real org.json on the JVM (Android's is a stub)
 

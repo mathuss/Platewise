@@ -72,14 +72,24 @@
     </plurals>
     <string name="toast_nothing_yesterday">Ayer no registraste nada en %s</string>
     <string name="toast_scanner_error">No se pudo abrir el escáner de códigos</string>
+    <plurals name="toast_added_n">
+        <item quantity="one">Agregado %1$d alimento a %2$s</item>
+        <item quantity="many">Agregados %1$d alimentos a %2$s</item>
+        <item quantity="other">Agregados %1$d alimentos a %2$s</item>
+    </plurals>
 
     <!-- Add food -->
     <string name="add_food_title">Agregar alimento</string>
     <string name="search_hint">Buscar: pollo, arroz, yogur…</string>
     <string name="chip_barcode">Código de barras</string>
+    <string name="chip_describe">Describir</string>
     <string name="chip_quick">Rápido</string>
     <string name="chip_create">Crear alimento</string>
     <string name="looking_up_product">Buscando el producto…</string>
+    <string name="take_photo">Sacar foto</string>
+    <string name="pick_gallery">Elegir de la galería</string>
+    <string name="toast_photo_error">No se pudo leer la foto</string>
+    <string name="toast_no_camera">No hay app de cámara disponible</string>
     <string name="recents">Recientes</string>
     <string name="my_foods">Mis alimentos</string>
     <string name="empty_add_hint">Buscá un alimento o escaneá un código de barras.</string>
@@ -100,6 +110,21 @@
     <string name="prot_short">Prot.</string>
     <string name="carbs_short">Carbs</string>
     <string name="fat_short">Grasas</string>
+    <string name="describe_title">Describí lo que comiste</string>
+    <string name="describe_example">Ej.: \"2 empanadas de carne y una coca chica\"</string>
+    <string name="describe_go">Buscar alimentos</string>
+
+    <!-- Describe -->
+    <string name="title_description">Descripción</string>
+    <string name="describe_unmatched">No encontré: %s</string>
+    <string name="describe_empty_title">No reconocí ningún alimento</string>
+    <string name="describe_empty_body">Probá con una frase más simple, como \"2 huevos y un café\", o buscá directamente.</string>
+    <string name="change_food">Cambiar alimento</string>
+    <plurals name="add_n_to">
+        <item quantity="one">Agregar %1$d a %2$s · %3$d kcal</item>
+        <item quantity="many">Agregar %1$d a %2$s · %3$d kcal</item>
+        <item quantity="other">Agregar %1$d a %2$s · %3$d kcal</item>
+    </plurals>
 
     <!-- Food sheet -->
     <string name="quantity">Cantidad</string>
@@ -111,6 +136,10 @@
 
     <!-- Create food -->
     <string name="create_food_title">Crear alimento</string>
+    <string name="scan_label">Escanear etiqueta nutricional</string>
+    <string name="reading_label">Leyendo la etiqueta…</string>
+    <string name="label_review_note">Leído de la foto: revisá los valores.</string>
+    <string name="label_failed">No pude leer la tabla. Probá con una foto nítida, de frente y con buena luz.</string>
     <string name="name">Nombre</string>
     <string name="brand_optional">Marca (opcional)</string>
     <string name="barcode_optional">Código de barras (opcional)</string>

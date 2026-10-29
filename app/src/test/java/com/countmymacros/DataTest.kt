@@ -1,15 +1,20 @@
 package com.countmymacros
 
 import com.countmymacros.data.Activity
+import com.countmymacros.data.BaseFoods
 import com.countmymacros.data.Entry
 import com.countmymacros.data.Food
 import com.countmymacros.data.FoodSearch
 import com.countmymacros.data.FoodSource
+import com.countmymacros.data.GRAMS
 import com.countmymacros.data.GoalType
 import com.countmymacros.data.Goals
+import com.countmymacros.data.LabelText
 import com.countmymacros.data.MacroPreset
 import com.countmymacros.data.Macros
 import com.countmymacros.data.Meal
+import com.countmymacros.data.MealText
+import com.countmymacros.data.OcrLine
 import com.countmymacros.data.OpenFoodFacts
 import com.countmymacros.data.Profile
 import com.countmymacros.data.Sex
@@ -19,6 +24,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -116,6 +122,102 @@ class DataTest {
                 assertTrue("$n: $kcal kcal vs $fromMacros from macros", kotlin.math.abs(kcal - fromMacros) / kcal < tolerance)
             }
         }
+    }
+
+    private val baseEs by lazy { BaseFoods.parse(File("src/main/assets/alimentos.json").readText(), "es") }
+    private val baseEn by lazy { BaseFoods.parse(File("src/main/assets/alimentos.json").readText(), "en") }
+
+    @Test
+    fun describeParsesQuantitiesAndUnits() {
+        val meal = MealText.parse("2 empanadas de carne y una coca chica", baseEs)
+        assertEquals(2, meal.items.size)
+        assertTrue(meal.items[0].food.name.contains("Empanada de carne"))
+        assertEquals(2.0, meal.items[0].quantity, 0.0)
+        assertEquals("1 empanada", meal.items[0].serving.name)
+        assertTrue(meal.items[1].food.name.contains("Gaseosa"))
+        assertEquals(1.0, meal.items[1].quantity, 0.0)
+
+        val withPure = MealText.parse("media milanesa con puré", baseEs)
+        assertEquals(2, withPure.items.size)
+        assertTrue(withPure.items[0].food.name.contains("Milanesa"))
+        assertEquals(0.5, withPure.items[0].quantity, 0.0)
+        assertTrue(withPure.items[1].food.name.contains("Puré"))
+
+        val grams = MealText.parse("200 g de arroz", baseEs).items.single()
+        assertTrue(grams.food.name.contains("Arroz"))
+        assertEquals(GRAMS, grams.serving)
+        assertEquals(200.0, grams.quantity, 0.0)
+
+        val cup = MealText.parse("una taza de arroz cocido", baseEs).items.single()
+        assertEquals("Arroz blanco cocido", cup.food.name)
+        assertEquals("1 taza", cup.serving.name)
+
+        // "coca" alone is ambiguous between regular and diet soda: either can be the match,
+        // the other should show up as an alternative to switch to.
+        val can = MealText.parse("una lata de coca", baseEs).items.single()
+        assertTrue(can.food.name.startsWith("Gaseosa"))
+        assertEquals("1 lata", can.serving.name)
+        assertTrue((listOf(can.food) + can.alternatives).size > 1)
+
+        assertTrue(MealText.parse("xyzzy", baseEs).items.isEmpty())
+        assertEquals(listOf("xyzzy"), MealText.parse("xyzzy", baseEs).unmatched)
+
+        val eggs = MealText.parse("2 eggs", baseEn).items.single()
+        assertEquals("Egg", eggs.food.name)
+        assertEquals(2.0, eggs.quantity, 0.0)
+    }
+
+    private fun line(text: String, left: Int, top: Int, right: Int, bottom: Int) =
+        OcrLine(text, left, top, right, bottom)
+
+    @Test
+    fun labelTextParsesCommonLayouts() {
+        // Mercosur-style: name/value/%VD columns, one row per nutrient, per serving (not per 100 g).
+        // "Grasas saturadas" is listed before "Grasas totales" on purpose, to check it's skipped.
+        val mercosur = listOf(
+            line("Porción", 10, 100, 90, 120), line("30 g", 200, 100, 260, 120),
+            line("Valor energético", 10, 140, 160, 160), line("150 kcal", 200, 140, 280, 160), line("7%", 300, 140, 330, 160),
+            line("Grasas saturadas", 10, 170, 150, 190), line("2 g", 200, 170, 230, 190),
+            line("Grasas totales", 10, 230, 130, 250), line("5 g", 200, 230, 230, 250), line("9%", 300, 230, 330, 250),
+            line("Proteínas", 10, 260, 90, 280), line("3 g", 200, 260, 230, 280),
+            line("Carbohidratos", 10, 290, 110, 310), line("20 g", 200, 290, 260, 310),
+        )
+        val m = LabelText.parse(mercosur)!!
+        assertEquals(150.0, m.kcal!!, 0.0)
+        assertEquals(3.0, m.protein!!, 0.0)
+        assertEquals(20.0, m.carbs!!, 0.0)
+        assertEquals(5.0, m.fat!!, 0.0) // not the 2 g from "Grasas saturadas"
+        assertEquals(30.0, m.servingGrams!!, 0.0)
+        assertFalse(m.per100)
+
+        // Per 100 g, name and value OCR'd together on one line.
+        val per100 = listOf(
+            line("Información nutricional", 10, 10, 200, 30),
+            line("Por 100 g", 10, 40, 100, 60),
+            line("Valor energético 420 kcal", 10, 80, 220, 100),
+            line("Proteínas 9,5 g", 10, 110, 150, 130),
+            line("Hidratos de carbono 70 g", 10, 140, 200, 160),
+            line("Grasas totales 11 g", 10, 170, 170, 190),
+        )
+        val p = LabelText.parse(per100)!!
+        assertEquals(420.0, p.kcal!!, 0.0)
+        assertEquals(9.5, p.protein!!, 0.0) // comma decimal
+        assertEquals(70.0, p.carbs!!, 0.0)
+        assertEquals(11.0, p.fat!!, 0.0)
+        assertNull(p.servingGrams)
+        assertTrue(p.per100)
+
+        // Only kJ given for energy; converts to kcal. Missing fat is fine (kcal + 2 macros).
+        val kjOnly = listOf(
+            line("Energia 1757 kJ", 10, 10, 160, 30),
+            line("Proteinas 9 g", 10, 40, 120, 60),
+            line("Carbohidratos 70 g", 10, 70, 150, 90),
+        )
+        val kj = LabelText.parse(kjOnly)!!
+        assertEquals(419.9, kj.kcal!!, 0.5)
+        assertNull(kj.fat)
+
+        assertNull(LabelText.parse(listOf(line("Ingredientes: harina, agua, sal.", 10, 10, 200, 30))))
     }
 
     @Test

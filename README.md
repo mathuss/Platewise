@@ -12,7 +12,13 @@ del APK original ([docs/ANALISIS_FITIA.md](docs/ANALISIS_FITIA.md)).
   producto no está, lo creás a mano y queda guardado.
 - **Buscador**: base local de ~135 alimentos comunes (al instante, sin internet) + búsqueda
   en Open Food Facts. Acepta tildes o no y nombres alternativos (palta/aguacate, etc.).
-- **Crear alimento** por 100 g o por porción.
+- **Describir**: "2 empanadas de carne y una coca chica" → alimentos de la base local, con
+  cantidad y porción reconocidas y revisables antes de agregar. Reglas de texto, no IA: anda
+  bien con frases directas, no con descripciones abiertas ("un poco de queso arriba").
+- **Crear alimento** por 100 g o por porción, o **escaneando la etiqueta nutricional**: lee el
+  texto de la foto con ML Kit, en el teléfono (sin key, sin costo, sin salir de internet), y
+  completa kcal/P/C/G. Anda bien con etiquetas nítidas y de frente; con fotos borrosas o
+  tablas poco comunes no completa nada y avisa.
 - **Agregar rápido** (solo kcal y macros), **Copiar de ayer** por comida, **Recientes** con
   la última cantidad usada.
 - **Objetivos**: sexo, edad, altura, peso, actividad, objetivo (bajar / mantener / ganar,
@@ -25,9 +31,10 @@ del APK original ([docs/ANALISIS_FITIA.md](docs/ANALISIS_FITIA.md)).
   Lo ya registrado queda con el nombre que tenía.
 
 Sin anuncios, sin cuentas, sin analítica, sin suscripción. Los datos quedan en el teléfono
-(SQLite). Sin IA ni API keys: nada sale del teléfono salvo las consultas a Open Food Facts.
-Permisos: solo internet; el lector de códigos de Google no necesita permiso de cámara. El APK
-pesa **~3 MB** contra los 144 MB de Fitia.
+(SQLite). Sin IA en la nube ni API keys: nada sale del teléfono salvo las consultas a Open
+Food Facts; describir y leer etiquetas corren enteros en el dispositivo. Permisos: solo
+internet; ni cámara ni almacenamiento, porque las fotos pasan por la app de cámara y el
+selector de fotos del sistema. El APK pesa **~3,8 MB** contra los 144 MB de Fitia.
 
 ## Cómo compilar
 
@@ -75,12 +82,16 @@ app/src/main/java/com/countmymacros/
     Models.kt              Food, Serving, Entry, Macros, Meal
     Db.kt                  SQLite: entradas, mis alimentos, peso
     Repo.kt                base local + DB + Open Food Facts
+    BaseFoods.kt           parser de assets/alimentos.json
     OpenFoodFacts.kt       código de barras y búsqueda
+    MealText.kt            "Describir": texto libre → alimentos de la base (sin IA)
+    LabelText.kt           etiqueta nutricional: líneas de OCR → kcal/P/C/G (sin IA)
     Goals.kt               BMR/TDEE, objetivo y distribución de macros
     FoodSearch.kt          búsqueda local sin tildes
     Prefs.kt               perfil e idioma
-  ui/                      pantallas Compose
-app/src/test/              tests (cálculos, búsqueda y parser de Open Food Facts)
+  ui/                      pantallas Compose (LabelScanner.kt: ML Kit → líneas de OCR)
+app/src/test/              tests (cálculos, búsqueda, Describir, lectura de etiquetas y
+                           parser de Open Food Facts)
 ```
 
 ## Estado
@@ -89,10 +100,12 @@ app/src/test/              tests (cálculos, búsqueda y parser de Open Food Fac
 launcher con el logo B tonal (tenedor, plato en tres porciones y cuchillo), fondo `#E4EBC8` y
 figura `#3D5010`, con capa monocroma para los íconos temáticos de Android 13+.
 
-Compila (debug y release minificado), pasan los 7 tests y lint queda sin advertencias. Se
-quitaron la foto de comida, "Describir" y la lectura de etiquetas con IA (Claude), que
-necesitaban una API key propia.
+Compila (debug y release minificado), pasan los 9 tests y lint queda sin advertencias. Se
+quitaron la foto de comida (requiere reconocer el plato, no hay forma de hacerlo sin IA) y
+la IA en la nube (Claude) que antes impulsaba "Describir" y la lectura de etiquetas; las dos
+vuelven con reglas de texto y ML Kit, corriendo en el teléfono.
 
 Probado en un Galaxy A55 (Android 16) por adb, en español e inglés y en claro y oscuro:
 búsqueda local y en Open Food Facts, agregar, editar, borrar, agregar rápido, copiar de
-ayer, Perfil y Progreso. Falta probar en el teléfono el escáner de códigos.
+ayer, Perfil y Progreso. Falta probar en el teléfono "Describir", la lectura de etiquetas y
+el escáner de códigos.

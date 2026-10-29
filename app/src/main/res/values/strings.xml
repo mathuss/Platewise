@@ -73,14 +73,23 @@
     </plurals>
     <string name="toast_nothing_yesterday">Nothing was logged in %s yesterday</string>
     <string name="toast_scanner_error">Couldn\'t open the barcode scanner</string>
+    <plurals name="toast_added_n">
+        <item quantity="one">Added %1$d food to %2$s</item>
+        <item quantity="other">Added %1$d foods to %2$s</item>
+    </plurals>
 
     <!-- Add food -->
     <string name="add_food_title">Add food</string>
     <string name="search_hint">Search: chicken, rice, yogurt…</string>
     <string name="chip_barcode">Barcode</string>
+    <string name="chip_describe">Describe</string>
     <string name="chip_quick">Quick add</string>
     <string name="chip_create">Create food</string>
     <string name="looking_up_product">Looking up the product…</string>
+    <string name="take_photo">Take photo</string>
+    <string name="pick_gallery">Choose from gallery</string>
+    <string name="toast_photo_error">Couldn\'t read the photo</string>
+    <string name="toast_no_camera">No camera app available</string>
     <string name="recents">Recent</string>
     <string name="my_foods">My foods</string>
     <string name="empty_add_hint">Search for a food or scan a barcode.</string>
@@ -101,6 +110,20 @@
     <string name="prot_short">Prot.</string>
     <string name="carbs_short">Carbs</string>
     <string name="fat_short">Fat</string>
+    <string name="describe_title">Describe what you ate</string>
+    <string name="describe_example">E.g. \"2 beef empanadas and a small Coke\"</string>
+    <string name="describe_go">Find foods</string>
+
+    <!-- Describe -->
+    <string name="title_description">Description</string>
+    <string name="describe_unmatched">Couldn\'t find: %s</string>
+    <string name="describe_empty_title">No foods recognized</string>
+    <string name="describe_empty_body">Try a simpler phrase, like \"2 eggs and a coffee\", or search instead.</string>
+    <string name="change_food">Change food</string>
+    <plurals name="add_n_to">
+        <item quantity="one">Add %1$d to %2$s · %3$d kcal</item>
+        <item quantity="other">Add %1$d to %2$s · %3$d kcal</item>
+    </plurals>
 
     <!-- Food sheet -->
     <string name="quantity">Quantity</string>
@@ -112,6 +135,10 @@
 
     <!-- Create food -->
     <string name="create_food_title">Create food</string>
+    <string name="scan_label">Scan nutrition label</string>
+    <string name="reading_label">Reading the label…</string>
+    <string name="label_review_note">Read from the photo — check the numbers.</string>
+    <string name="label_failed">Couldn\'t read the table. Try a sharp, front-on photo with good light.</string>
     <string name="name">Name</string>
     <string name="brand_optional">Brand (optional)</string>
     <string name="barcode_optional">Barcode (optional)</string>

@@ -1,7 +1,6 @@
 package com.countmymacros.data
 
 import android.content.Context
-import org.json.JSONArray
 import java.time.LocalDate
 import java.util.UUID
 
@@ -9,35 +8,19 @@ class Repo(private val context: Context) {
     private val db = Db(context)
     val prefs = Prefs(context)
 
-    private val baseJson: JSONArray by lazy {
-        JSONArray(context.assets.open("alimentos.json").bufferedReader().use { it.readText() })
+    private val baseJson: String by lazy {
+        context.assets.open("alimentos.json").bufferedReader().use { it.readText() }
     }
     private val baseCache = HashMap<String, List<Food>>()
 
-    /**
-     * Offline starter catalog (assets/alimentos.json) named in [lang]. The other language's
-     * name goes into the aliases, so "pollo" and "chicken" both find it either way.
-     */
     @Synchronized
-    fun baseFoods(lang: String): List<Food> = baseCache.getOrPut(lang) {
-        (0 until baseJson.length()).map { i ->
-            val o = baseJson.getJSONObject(i)
-            val es = o.getString("n")
-            val en = o.getString("e")
-            val s = o.getJSONArray("s")
-            Food(
-                // Keyed by the Spanish name so the key is the same in both languages.
-                key = "base:" + FoodSearch.normalize(es).replace(Regex("[^a-z0-9]+"), "-").trim('-'),
-                name = if (lang == "es") es else en,
-                per100 = Macros(o.getDouble("k"), o.getDouble("p"), o.getDouble("c"), o.getDouble("f")),
-                servings = (0 until s.length()).map {
-                    val p = s.getJSONArray(it)
-                    Serving(if (lang == "es") p.getString(0) else p.getString(1), p.getDouble(2))
-                },
-                source = FoodSource.BASE,
-                aliases = o.optString("a") + " " + (if (lang == "es") en else es),
-            )
-        }
+    fun baseFoods(lang: String): List<Food> = baseCache.getOrPut(lang) { BaseFoods.parse(baseJson, lang) }
+
+    /** My foods plus the base catalog, my own foods taking priority on a key clash. */
+    fun localFoods(lang: String): List<Food> {
+        val mine = db.foods()
+        val mineKeys = mine.map { it.key }.toSet()
+        return mine + baseFoods(lang).filter { it.key !in mineKeys }
     }
 
     // --- diary ---
@@ -72,11 +55,7 @@ class Repo(private val context: Context) {
 
     fun newCustomKey() = "custom:" + UUID.randomUUID()
 
-    fun searchLocal(query: String, lang: String): List<Food> {
-        val mine = db.foods()
-        val mineKeys = mine.map { it.key }.toSet()
-        return FoodSearch.search(query, mine + baseFoods(lang).filter { it.key !in mineKeys })
-    }
+    fun searchLocal(query: String, lang: String): List<Food> = FoodSearch.search(query, localFoods(lang))
 
     /** Saved foods first (instant, offline), then Open Food Facts. Found products are cached. */
     fun barcode(code: String, lang: String): Food? =

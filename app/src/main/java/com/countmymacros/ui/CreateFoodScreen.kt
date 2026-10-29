@@ -1,18 +1,27 @@
 package com.countmymacros.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.DocumentScanner
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +33,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +47,7 @@ import com.countmymacros.data.FoodSource
 import com.countmymacros.data.Macros
 import com.countmymacros.data.Meal
 import com.countmymacros.data.Serving
+import com.countmymacros.data.fmt
 import com.countmymacros.data.parseNum
 import kotlin.math.roundToInt
 
@@ -53,7 +64,24 @@ fun CreateFoodScreen(vm: AppViewModel, meal: Meal, barcode: String?) {
     var p by remember { mutableStateOf("") }
     var c by remember { mutableStateOf("") }
     var f by remember { mutableStateOf("") }
+    var photoMenu by remember { mutableStateOf(false) }
     val defaultServing = stringResource(R.string.default_serving)
+
+    val photos = rememberPhotoSource(onJpeg = vm::scanLabel, onError = { vm.toast = it })
+
+    // Fill the form from a scanned label (values come back per 100 g, or per serving).
+    LaunchedEffect(vm.labelResult) {
+        val l = vm.labelResult ?: return@LaunchedEffect
+        if (l.servingGrams != null) {
+            servingGrams = fmt(l.servingGrams)
+            if (servingName.isBlank()) servingName = defaultServing
+            perServing = !l.per100
+        }
+        l.kcal?.let { kcal = fmt(it) }
+        l.protein?.let { p = fmt(it) }
+        l.carbs?.let { c = fmt(it) }
+        l.fat?.let { f = fmt(it) }
+    }
 
     val sGrams = parseNum(servingGrams) ?: 0.0
     val protein = parseNum(p) ?: 0.0
@@ -83,6 +111,37 @@ fun CreateFoodScreen(vm: AppViewModel, meal: Meal, barcode: String?) {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            Box {
+                FilledTonalButton(
+                    onClick = { photoMenu = true },
+                    enabled = !vm.labelLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (vm.labelLoading) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Text("  " + stringResource(R.string.reading_label))
+                    } else {
+                        Icon(Icons.Filled.DocumentScanner, null)
+                        Text("  " + stringResource(R.string.scan_label))
+                    }
+                }
+                DropdownMenu(expanded = photoMenu, onDismissRequest = { photoMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.take_photo)) },
+                        leadingIcon = { Icon(Icons.Filled.CameraAlt, null) },
+                        onClick = { photoMenu = false; photos.takePhoto() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.pick_gallery)) },
+                        leadingIcon = { Icon(Icons.Filled.PhotoLibrary, null) },
+                        onClick = { photoMenu = false; photos.pickFromGallery() },
+                    )
+                }
+            }
+            vm.labelError?.let { Text(it.text(), color = MaterialTheme.colorScheme.error) }
+            if (vm.labelResult != null) {
+                Text(stringResource(R.string.label_review_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
 
             OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(brand, { brand = it }, label = { Text(stringResource(R.string.brand_optional)) }, singleLine = true, modifier = Modifier.fillMaxWidth())

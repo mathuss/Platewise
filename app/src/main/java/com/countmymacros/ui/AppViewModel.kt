@@ -9,7 +9,11 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.countmymacros.R
+import com.countmymacros.data.Burn
 import com.countmymacros.data.Entry
+import com.countmymacros.data.Equipment
+import com.countmymacros.data.Exercise
+import com.countmymacros.data.ExerciseType
 import com.countmymacros.data.Food
 import com.countmymacros.data.FoodSource
 import com.countmymacros.data.Goals
@@ -19,17 +23,26 @@ import com.countmymacros.data.Lang
 import com.countmymacros.data.Macros
 import com.countmymacros.data.Meal
 import com.countmymacros.data.MealText
+import com.countmymacros.data.Muscle
 import com.countmymacros.data.OffException
 import com.countmymacros.data.Profile
 import com.countmymacros.data.Repo
+import com.countmymacros.data.Routine
 import com.countmymacros.data.Serving
 import com.countmymacros.data.Targets
 import com.countmymacros.data.Weight
+import com.countmymacros.data.Workout
+import com.countmymacros.data.WorkoutExercise
+import com.countmymacros.data.WorkoutJson
+import com.countmymacros.data.WorkoutSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.io.IOException
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.util.UUID
 
 /** Full-screen pages pushed over the tabs. */
@@ -37,6 +50,28 @@ sealed interface Screen {
     data class AddFood(val meal: Meal) : Screen
     data class Describe(val meal: Meal) : Screen
     data class CreateFood(val meal: Meal, val barcode: String? = null) : Screen
+    data object EditRoutine : Screen
+    data object PickExercises : Screen
+    data object RunWorkout : Screen
+}
+
+/** Where the exercise picker puts what the user selects. */
+enum class PickerTarget { ROUTINE, SESSION }
+
+/**
+ * A workout being logged: [live] ones run from [startMs] until finished; the others are logged
+ * after the fact with a chosen start and [durationMin].
+ */
+data class Session(
+    val name: String,
+    val routineId: Long?,
+    val live: Boolean,
+    val startMs: Long,
+    val durationMin: Int = 60,
+    val exercises: List<WorkoutExercise> = emptyList(),
+    val restEndMs: Long = 0,
+) {
+    val date: LocalDate get() = Instant.ofEpochMilli(startMs).atZone(ZoneId.systemDefault()).toLocalDate()
 }
 
 /**
@@ -79,6 +114,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Bumped whenever saved foods change, so lists that show them re-read. */
     var foodsVersion by mutableIntStateOf(0); private set
 
+    // --- training ---
+    var exercises by mutableStateOf<List<Exercise>>(emptyList()); private set
+    var routines by mutableStateOf<List<Routine>>(emptyList()); private set
+    var recentWorkouts by mutableStateOf<List<Workout>>(emptyList()); private set
+
+    /** Workouts finished on the diary's day; their calories add to that day's food budget. */
+    var dayWorkouts by mutableStateOf<List<Workout>>(emptyList()); private set
+    val burned: Double get() = dayWorkouts.sumOf { it.kcal }
+
+    var routineDraft by mutableStateOf<Routine?>(null); private set
+    var session by mutableStateOf<Session?>(null); private set
+    var previous by mutableStateOf<Map<String, List<WorkoutSet>>>(emptyMap()); private set
+    private var pickerTarget = PickerTarget.ROUTINE
+
     // --- navigation ---
     val stack = mutableStateListOf<Screen>()
     var sheet by mutableStateOf<FoodSheet?>(null)
@@ -86,12 +135,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         reload()
+        loadTraining()
+        restoreSession()
     }
 
     fun reload() {
         val d = date
         viewModelScope.launch {
             entries = withContext(Dispatchers.IO) { repo.day(d) }
+            dayWorkouts = withContext(Dispatchers.IO) { repo.workoutsOn(d) }
         }
     }
 
@@ -172,6 +224,168 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             else UiText.Plural(R.plurals.toast_copied, n, listOf(n))
             reload()
         }
+    }
+
+    // --- training ---
+
+    fun exercise(id: String): Exercise? = exercises.firstOrNull { it.id == id }
+
+    private fun loadTraining() {
+        viewModelScope.launch {
+            exercises = withContext(Dispatchers.IO) { repo.exercises() }
+            routines = withContext(Dispatchers.IO) { repo.routines() }
+            recentWorkouts = withContext(Dispatchers.IO) { repo.recentWorkouts() }
+        }
+    }
+
+    fun newRoutine() {
+        routineDraft = Routine(name = "")
+        push(Screen.EditRoutine)
+    }
+
+    fun editRoutine(r: Routine) {
+        routineDraft = r
+        push(Screen.EditRoutine)
+    }
+
+    fun updateRoutine(r: Routine) {
+        routineDraft = r
+    }
+
+    fun saveRoutine() {
+        val r = routineDraft ?: return
+        if (r.name.isBlank()) return
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.saveRoutine(r.copy(name = r.name.trim())) }
+            routines = withContext(Dispatchers.IO) { repo.routines() }
+            routineDraft = null
+            pop()
+        }
+    }
+
+    fun deleteRoutine(r: Routine) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.deleteRoutine(r.id) }
+            routines = withContext(Dispatchers.IO) { repo.routines() }
+        }
+    }
+
+    fun createExercise(name: String, type: ExerciseType, muscle: Muscle, equipment: Equipment, onDone: (Exercise) -> Unit) {
+        viewModelScope.launch {
+            val e = withContext(Dispatchers.IO) { repo.addCustomExercise(name.trim(), type, muscle, equipment) }
+            exercises = exercises + e
+            onDone(e)
+        }
+    }
+
+    fun pickExercises(target: PickerTarget) {
+        pickerTarget = target
+        push(Screen.PickExercises)
+    }
+
+    /** Appends the picked exercises, each with three empty sets, to the routine or workout in progress. */
+    fun addExercises(ids: List<String>) {
+        val added = ids.map { WorkoutExercise(it, sets = List(3) { WorkoutSet() }) }
+        if (pickerTarget == PickerTarget.ROUTINE) {
+            routineDraft = routineDraft?.let { it.copy(exercises = it.exercises + added) }
+        } else {
+            session?.let { updateSession(it.copy(exercises = it.exercises + added)) }
+            loadPrevious(ids)
+        }
+        pop()
+    }
+
+    private fun loadPrevious(ids: List<String>) {
+        viewModelScope.launch {
+            val found = withContext(Dispatchers.IO) { ids.associateWith { repo.previousSets(it) } }
+            previous = previous + found
+        }
+    }
+
+    /** Starts a live workout from [routine] (or a free one when null). */
+    fun startWorkout(routine: Routine?, defaultName: String) {
+        val exercises = routine?.exercises.orEmpty().map { e -> e.copy(sets = e.sets.map { it.copy(done = false) }) }
+        session = Session(routine?.name ?: defaultName, routine?.id, live = true, startMs = System.currentTimeMillis(), exercises = exercises)
+        persistSession()
+        loadPrevious(exercises.map { it.exerciseId })
+        push(Screen.RunWorkout)
+    }
+
+    /** Logs [routine] as already done: an hour ago by default, every set ticked, to be adjusted. */
+    fun logWorkout(routine: Routine, minutes: Int = 60) {
+        val start = System.currentTimeMillis() - minutes * 60_000L
+        val done = routine.exercises.map { e -> e.copy(sets = e.sets.map { it.copy(done = true) }) }
+        session = Session(routine.name, routine.id, live = false, startMs = start, durationMin = minutes, exercises = done)
+        push(Screen.RunWorkout)
+    }
+
+    fun updateSession(s: Session) {
+        session = s
+        if (s.live) persistSession()
+    }
+
+    fun discardSession() {
+        session = null
+        repo.prefs.activeWorkout = null
+    }
+
+    /** Saves the workout. Returns false (and says why) when there is nothing completed to save. */
+    fun finishSession() {
+        val s = session ?: return
+        val now = System.currentTimeMillis()
+        val endMs = if (s.live) now else s.startMs + s.durationMin * 60_000L
+        val done = s.exercises
+            .map { e -> e.copy(sets = e.sets.filter { it.done }) }
+            .filter { it.sets.isNotEmpty() }
+        if (done.isEmpty()) {
+            toast = uiText(R.string.toast_no_sets)
+            return
+        }
+        val kcal = Burn.kcal((endMs - s.startMs) / 1000, profile.weightKg)
+        val w = Workout(
+            date = s.date.toString(), startMs = s.startMs, endMs = endMs, name = s.name,
+            routineId = s.routineId, kcal = kcal, exercises = done,
+        )
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.addWorkout(w) }
+            recentWorkouts = withContext(Dispatchers.IO) { repo.recentWorkouts() }
+            reload()
+            discardSession()
+            stack.clear()
+            toast = uiText(R.string.toast_workout_saved, kotlin.math.round(kcal).toInt())
+        }
+    }
+
+    fun deleteWorkout(w: Workout) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { repo.deleteWorkout(w.id) }
+            recentWorkouts = withContext(Dispatchers.IO) { repo.recentWorkouts() }
+            reload()
+        }
+    }
+
+    private fun persistSession() {
+        val s = session ?: return
+        repo.prefs.activeWorkout = JSONObject()
+            .put("name", s.name).put("routine", s.routineId ?: -1L).put("start", s.startMs)
+            .put("rest", s.restEndMs).put("ex", WorkoutJson.encode(s.exercises)).toString()
+    }
+
+    private fun restoreSession() {
+        val json = repo.prefs.activeWorkout ?: return
+        session = runCatching {
+            val o = JSONObject(json)
+            val exercises = WorkoutJson.decode(o.getString("ex"))
+            loadPrevious(exercises.map { it.exerciseId })
+            Session(
+                name = o.getString("name"),
+                routineId = o.getLong("routine").takeIf { it >= 0 },
+                live = true,
+                startMs = o.getLong("start"),
+                exercises = exercises,
+                restEndMs = o.optLong("rest"),
+            )
+        }.getOrNull()
     }
 
     // --- profile & settings ---

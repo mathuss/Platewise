@@ -19,3 +19,6 @@ Fitia.apk
 # Release signing: keystore + passwords stay local, never in git
 /signing/
 /dist/
+
+# Exercise thumbnails extracted from Hevy.apk by tools/hevy_extract.py (not redistributed)
+/app/src/main/hevy-assets/

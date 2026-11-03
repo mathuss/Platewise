@@ -64,6 +64,38 @@ class Repo(private val context: Context) {
     fun searchOnline(query: String, lang: String): List<Food> =
         OpenFoodFacts.search(query, lang, Lang.offCountryTag())
 
+    // --- training ---
+
+    private val catalog: List<Exercise> by lazy {
+        ExerciseCatalog.parse(context.assets.open("ejercicios.json").bufferedReader().use { it.readText() })
+    }
+
+    /** The bundled catalog (most popular first) followed by the user's own exercises. */
+    fun exercises(): List<Exercise> = catalog + db.customExercises()
+
+    fun addCustomExercise(name: String, type: ExerciseType, muscle: Muscle, equipment: Equipment): Exercise =
+        Exercise("custom:" + db.insertCustomExercise(name, type, muscle, equipment), name, name, type, muscle, equipment)
+
+    fun routines(): List<Routine> = db.routines()
+
+    fun saveRoutine(r: Routine) = db.saveRoutine(r)
+
+    fun deleteRoutine(id: Long) = db.deleteRoutine(id)
+
+    fun workoutsOn(date: LocalDate): List<Workout> = db.workouts(date.toString())
+
+    fun recentWorkouts(limit: Int = 15): List<Workout> = db.recentWorkouts(limit)
+
+    fun addWorkout(w: Workout) = db.insertWorkout(w)
+
+    fun deleteWorkout(id: Long) = db.deleteWorkout(id)
+
+    /** What the user did last time for [exerciseId], to show as the reference while logging. */
+    fun previousSets(exerciseId: String): List<WorkoutSet> =
+        db.recentWorkouts(60).firstNotNullOfOrNull { w ->
+            w.exercises.firstOrNull { e -> e.exerciseId == exerciseId && e.sets.any { it.done } }?.sets
+        }.orEmpty()
+
     // --- weight ---
 
     fun weights(): List<Weight> = db.weights()

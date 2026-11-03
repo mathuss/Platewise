@@ -10,6 +10,11 @@ class Prefs(context: Context) {
         get() = sp.getBoolean("profile_set", false)
         set(v) = sp.edit().putBoolean("profile_set", v).apply()
 
+    /** The workout being logged right now, as JSON, so it survives the app being closed. */
+    var activeWorkout: String?
+        get() = sp.getString("active_workout", null)
+        set(v) = sp.edit().apply { if (v == null) remove("active_workout") else putString("active_workout", v) }.apply()
+
     /** In-app language before Android 13 ("" = follow the system). Android 13+ stores it itself. */
     var language: String
         get() = sp.getString("language", "") ?: ""

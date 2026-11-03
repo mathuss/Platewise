@@ -67,6 +67,10 @@ android {
         // "%d kcal": kcal is a unit symbol, it doesn't take a plural.
         disable += "PluralsCandidate"
     }
+    sourceSets {
+        // Exercise thumbnails extracted from Hevy.apk by tools/hevy_extract.py (not in git).
+        getByName("main").assets.srcDir("src/main/hevy-assets")
+    }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

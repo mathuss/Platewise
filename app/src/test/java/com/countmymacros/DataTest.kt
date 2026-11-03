@@ -2,6 +2,15 @@ package com.countmymacros
 
 import com.countmymacros.data.Activity
 import com.countmymacros.data.BaseFoods
+import com.countmymacros.data.Burn
+import com.countmymacros.data.ExerciseCatalog
+import com.countmymacros.data.ExerciseType
+import com.countmymacros.data.Muscle
+import com.countmymacros.data.SetType
+import com.countmymacros.data.Workout
+import com.countmymacros.data.WorkoutExercise
+import com.countmymacros.data.WorkoutJson
+import com.countmymacros.data.WorkoutSet
 import com.countmymacros.data.Entry
 import com.countmymacros.data.Food
 import com.countmymacros.data.FoodSearch
@@ -218,6 +227,40 @@ class DataTest {
         assertNull(kj.fat)
 
         assertNull(LabelText.parse(listOf(line("Ingredientes: harina, agua, sal.", 10, 10, 200, 30))))
+    }
+
+    @Test
+    fun exerciseCatalogIsConsistentAndSearchable() {
+        val json = File("src/main/assets/ejercicios.json").readText()
+        val all = ExerciseCatalog.parse(json)
+        assertTrue(all.size >= 400)
+        assertEquals("duplicate ids", all.size, all.map { it.id }.toSet().size)
+        assertTrue(all.all { it.en.isNotBlank() && it.es.isNotBlank() })
+        // Spanish or English names find the same exercise, with accents optional.
+        assertTrue(ExerciseCatalog.search(all, "press de banca").any { it.id == "79D0BB3A" })
+        assertTrue(ExerciseCatalog.search(all, "bench press").any { it.id == "79D0BB3A" })
+        val chestBarbell = ExerciseCatalog.search(all, "", Muscle.CHEST, com.countmymacros.data.Equipment.BARBELL)
+        assertTrue(chestBarbell.isNotEmpty() && chestBarbell.all { it.muscle == Muscle.CHEST })
+        assertEquals(ExerciseType.WEIGHT_REPS, all.first { it.id == "79D0BB3A" }.type)
+    }
+
+    @Test
+    fun workoutVolumeKcalAndJsonRoundTrip() {
+        val sets = listOf(
+            WorkoutSet(SetType.WARMUP, kg = 20.0, reps = 10, done = true),
+            WorkoutSet(kg = 80.0, reps = 8, done = true),
+            WorkoutSet(kg = 80.0, reps = 6, done = true),
+            WorkoutSet(kg = 80.0, reps = 6, done = false),
+        )
+        val exercises = listOf(WorkoutExercise("79D0BB3A", 120, "pausa", sets))
+        // Warm-ups and sets not done don't count: 80 x 8 + 80 x 6.
+        assertEquals(1120.0, Workout.volumeKg(exercises), 0.0)
+        assertEquals(exercises, WorkoutJson.decode(WorkoutJson.encode(exercises)))
+
+        // 60 min at 75 kg: MET 5.0 x 75 x 1 h; no time or no weight burns nothing.
+        assertEquals(375.0, Burn.kcal(3600, 75.0), 1e-9)
+        assertEquals(0.0, Burn.kcal(0, 75.0), 0.0)
+        assertEquals(0.0, Burn.kcal(3600, 0.0), 0.0)
     }
 
     @Test

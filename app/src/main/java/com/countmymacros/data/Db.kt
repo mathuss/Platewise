@@ -10,9 +10,10 @@ import org.json.JSONArray
 /**
  * Everything the user records lives here, on the device. Mirrors the parts of Fitia's Room
  * schema that matter for counting macros: diary entries (FoodModel/QuickItemModel), the
- * user's own foods (custom + scanned), and weight (WeightModel).
+ * user's own foods (custom + scanned), and weight (WeightModel). Version 2 adds training:
+ * routines, finished workouts and the user's own exercises.
  */
-class Db(context: Context) : SQLiteOpenHelper(context, "macros.db", null, 1) {
+class Db(context: Context) : SQLiteOpenHelper(context, "macros.db", null, 2) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -44,9 +45,43 @@ class Db(context: Context) : SQLiteOpenHelper(context, "macros.db", null, 1) {
         )
         db.execSQL("CREATE INDEX foods_barcode ON foods(barcode)")
         db.execSQL("CREATE TABLE weights (date TEXT PRIMARY KEY, kg REAL NOT NULL)")
+        createTrainingTables(db)
     }
 
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) createTrainingTables(db)
+    }
+
+    private fun createTrainingTables(db: SQLiteDatabase) {
+        db.execSQL(
+            """CREATE TABLE routines (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                notes TEXT NOT NULL,
+                position INTEGER NOT NULL,
+                data TEXT NOT NULL)"""
+        )
+        db.execSQL(
+            """CREATE TABLE workouts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                start_ms INTEGER NOT NULL,
+                end_ms INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                routine_id INTEGER,
+                kcal REAL NOT NULL,
+                data TEXT NOT NULL)"""
+        )
+        db.execSQL("CREATE INDEX workouts_date ON workouts(date)")
+        db.execSQL(
+            """CREATE TABLE custom_exercises (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                type TEXT NOT NULL,
+                muscle TEXT NOT NULL,
+                equipment TEXT NOT NULL)"""
+        )
+    }
 
     // --- entries ---
 
@@ -167,6 +202,102 @@ class Db(context: Context) : SQLiteOpenHelper(context, "macros.db", null, 1) {
 
     fun deleteWeight(date: String) {
         writableDatabase.delete("weights", "date = ?", arrayOf(date))
+    }
+
+    // --- routines ---
+
+    fun routines(): List<Routine> =
+        readableDatabase.query("routines", null, null, null, null, null, "position, id")
+            .use { c ->
+                c.map {
+                    Routine(it.long("id"), it.str("name"), it.str("notes"), WorkoutJson.decode(it.str("data")))
+                }
+            }
+
+    /** Inserts when [r] has no id yet, otherwise updates it. Returns the id. */
+    fun saveRoutine(r: Routine): Long {
+        val v = ContentValues().apply {
+            put("name", r.name)
+            put("notes", r.notes)
+            put("data", WorkoutJson.encode(r.exercises))
+        }
+        if (r.id != 0L) {
+            writableDatabase.update("routines", v, "id = ?", arrayOf(r.id.toString()))
+            return r.id
+        }
+        v.put("position", routines().size)
+        return writableDatabase.insert("routines", null, v)
+    }
+
+    fun deleteRoutine(id: Long) {
+        writableDatabase.delete("routines", "id = ?", arrayOf(id.toString()))
+    }
+
+    // --- workouts ---
+
+    fun workouts(fromDate: String, toDate: String = fromDate): List<Workout> =
+        readableDatabase.query(
+            "workouts", null, "date BETWEEN ? AND ?", arrayOf(fromDate, toDate), null, null, "start_ms",
+        ).use { c -> c.map { it.toWorkout() } }
+
+    fun recentWorkouts(limit: Int): List<Workout> =
+        readableDatabase.query("workouts", null, null, null, null, null, "start_ms DESC", limit.toString())
+            .use { c -> c.map { it.toWorkout() } }
+
+    fun insertWorkout(w: Workout): Long {
+        val v = ContentValues().apply {
+            put("date", w.date)
+            put("start_ms", w.startMs)
+            put("end_ms", w.endMs)
+            put("name", w.name)
+            put("routine_id", w.routineId)
+            put("kcal", w.kcal)
+            put("data", WorkoutJson.encode(w.exercises))
+        }
+        return writableDatabase.insert("workouts", null, v)
+    }
+
+    fun deleteWorkout(id: Long) {
+        writableDatabase.delete("workouts", "id = ?", arrayOf(id.toString()))
+    }
+
+    private fun Cursor.toWorkout() = Workout(
+        id = long("id"),
+        date = str("date"),
+        startMs = long("start_ms"),
+        endMs = long("end_ms"),
+        name = str("name"),
+        routineId = getLong(getColumnIndexOrThrow("routine_id")).takeIf { !isNull(getColumnIndexOrThrow("routine_id")) },
+        kcal = dbl("kcal"),
+        exercises = WorkoutJson.decode(str("data")),
+    )
+
+    // --- the user's own exercises ---
+
+    fun customExercises(): List<Exercise> =
+        readableDatabase.query("custom_exercises", null, null, null, null, null, "name COLLATE NOCASE")
+            .use { c ->
+                c.map {
+                    val name = it.str("name")
+                    Exercise(
+                        id = "custom:" + it.long("id"),
+                        en = name,
+                        es = name,
+                        type = ExerciseType.of(it.str("type")),
+                        muscle = Muscle.of(it.str("muscle")),
+                        equipment = Equipment.of(it.str("equipment")),
+                    )
+                }
+            }
+
+    fun insertCustomExercise(name: String, type: ExerciseType, muscle: Muscle, equipment: Equipment): Long {
+        val v = ContentValues().apply {
+            put("name", name)
+            put("type", type.id)
+            put("muscle", muscle.id)
+            put("equipment", equipment.id)
+        }
+        return writableDatabase.insert("custom_exercises", null, v)
     }
 
     // --- cursor helpers ---

@@ -26,9 +26,11 @@ import com.countmymacros.data.MealText
 import com.countmymacros.data.Muscle
 import com.countmymacros.data.OffException
 import com.countmymacros.data.Profile
+import com.countmymacros.data.Records
 import com.countmymacros.data.Repo
 import com.countmymacros.data.Routine
 import com.countmymacros.data.Serving
+import com.countmymacros.data.SetRecord
 import com.countmymacros.data.Targets
 import com.countmymacros.data.Weight
 import com.countmymacros.data.Workout
@@ -53,6 +55,7 @@ sealed interface Screen {
     data object EditRoutine : Screen
     data object PickExercises : Screen
     data object RunWorkout : Screen
+    data class WorkoutSummary(val workout: Workout, val records: List<SetRecord>) : Screen
 }
 
 /** Where the exercise picker puts what the user selects. */
@@ -361,12 +364,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             routineId = s.routineId, kcal = kcal, exercises = done,
         )
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { repo.addWorkout(w) }
+            // Records are measured against what was saved before this workout.
+            val history = withContext(Dispatchers.IO) { repo.recentWorkouts(60) }
+            val records = Records.find(done, history)
+            val id = withContext(Dispatchers.IO) { repo.addWorkout(w) }
             recentWorkouts = withContext(Dispatchers.IO) { repo.recentWorkouts() }
             reload()
             discardSession()
             stack.clear()
-            toast = uiText(R.string.toast_workout_saved, kotlin.math.round(kcal).toInt())
+            push(Screen.WorkoutSummary(w.copy(id = id), records))
         }
     }
 

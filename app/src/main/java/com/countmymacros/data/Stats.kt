@@ -38,6 +38,14 @@ object Stats {
     }
 }
 
+object Suggestions {
+    /** The routine to do next: one never done first, else the one whose last workout is the oldest. */
+    fun nextRoutine(routines: List<Routine>, history: List<Workout>): Routine? {
+        val lastDone = history.filter { it.routineId != null }.groupBy { it.routineId }.mapValues { (_, w) -> w.maxOf { it.startMs } }
+        return routines.minByOrNull { lastDone[it.id] ?: Long.MIN_VALUE }
+    }
+}
+
 /** A personal best set: the heaviest weight, and at equal weight the most reps. */
 data class SetRecord(val exerciseId: String, val kg: Double, val reps: Int)
 

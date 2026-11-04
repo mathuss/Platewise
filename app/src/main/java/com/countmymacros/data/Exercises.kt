@@ -8,17 +8,17 @@ import org.json.JSONArray
 enum class SetField { KG, REPS, DURATION, DISTANCE }
 
 /** Hevy's exercise types: they decide which columns a set has. */
-enum class ExerciseType(val id: String, val fields: List<SetField>) {
-    WEIGHT_REPS("weight_reps", listOf(SetField.KG, SetField.REPS)),
-    REPS_ONLY("reps_only", listOf(SetField.REPS)),
-    BODYWEIGHT_REPS("bodyweight_reps", listOf(SetField.KG, SetField.REPS)), // kg = added weight
-    BODYWEIGHT_ASSISTED_REPS("bodyweight_assisted_reps", listOf(SetField.KG, SetField.REPS)), // kg = assistance
-    DURATION("duration", listOf(SetField.DURATION)),
-    WEIGHT_DURATION("weight_duration", listOf(SetField.KG, SetField.DURATION)),
-    DISTANCE_DURATION("distance_duration", listOf(SetField.DISTANCE, SetField.DURATION)),
-    SHORT_DISTANCE_WEIGHT("short_distance_weight", listOf(SetField.KG, SetField.DISTANCE)),
-    FLOORS_DURATION("floors_duration", listOf(SetField.REPS, SetField.DURATION)),
-    STEPS_DURATION("steps_duration", listOf(SetField.REPS, SetField.DURATION));
+enum class ExerciseType(val id: String, val fields: List<SetField>, @StringRes val label: Int) {
+    WEIGHT_REPS("weight_reps", listOf(SetField.KG, SetField.REPS), R.string.type_weight_reps),
+    REPS_ONLY("reps_only", listOf(SetField.REPS), R.string.type_reps_only),
+    BODYWEIGHT_REPS("bodyweight_reps", listOf(SetField.KG, SetField.REPS), R.string.type_bodyweight_reps), // kg = added weight
+    BODYWEIGHT_ASSISTED_REPS("bodyweight_assisted_reps", listOf(SetField.KG, SetField.REPS), R.string.type_bodyweight_assisted), // kg = assistance
+    DURATION("duration", listOf(SetField.DURATION), R.string.type_duration),
+    WEIGHT_DURATION("weight_duration", listOf(SetField.KG, SetField.DURATION), R.string.type_weight_duration),
+    DISTANCE_DURATION("distance_duration", listOf(SetField.DISTANCE, SetField.DURATION), R.string.type_distance_duration),
+    SHORT_DISTANCE_WEIGHT("short_distance_weight", listOf(SetField.KG, SetField.DISTANCE), R.string.type_short_distance_weight),
+    FLOORS_DURATION("floors_duration", listOf(SetField.REPS, SetField.DURATION), R.string.type_floors_duration),
+    STEPS_DURATION("steps_duration", listOf(SetField.REPS, SetField.DURATION), R.string.type_steps_duration);
 
     companion object {
         fun of(id: String) = entries.firstOrNull { it.id == id } ?: WEIGHT_REPS

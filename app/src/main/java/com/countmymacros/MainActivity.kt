@@ -50,6 +50,7 @@ import com.countmymacros.ui.RoutineEditorScreen
 import com.countmymacros.ui.Screen
 import com.countmymacros.ui.TrainScreen
 import com.countmymacros.ui.WorkoutScreen
+import com.countmymacros.ui.WorkoutSummaryScreen
 import com.countmymacros.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
@@ -99,6 +100,7 @@ private fun App(vm: AppViewModel) {
         Screen.EditRoutine -> RoutineEditorScreen(vm)
         Screen.PickExercises -> ExercisePickerScreen(vm)
         Screen.RunWorkout -> WorkoutScreen(vm)
+        is Screen.WorkoutSummary -> WorkoutSummaryScreen(vm, top.workout, top.records)
         null -> Scaffold(
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {

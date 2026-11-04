@@ -5,6 +5,8 @@ import com.countmymacros.data.FoodSource
 import com.countmymacros.data.Macros
 import com.countmymacros.data.Meal
 import com.countmymacros.data.Records
+import com.countmymacros.data.Routine
+import com.countmymacros.data.Suggestions
 import com.countmymacros.data.SetType
 import com.countmymacros.data.Stats
 import com.countmymacros.data.Workout
@@ -67,5 +69,18 @@ class StatsTest {
         assertTrue(Records.find(now(80.0, 5, done = false), history).isEmpty())
         // The first time an exercise is done there is nothing to beat.
         assertTrue(Records.find(now(80.0, 5), emptyList()).isEmpty())
+    }
+
+    @Test
+    fun nextRoutineIsTheOneDoneLongestAgo() {
+        val a = Routine(id = 1, name = "A")
+        val b = Routine(id = 2, name = "B")
+        val c = Routine(id = 3, name = "C")
+        fun done(routineId: Long, startMs: Long) = workout(WorkoutSet(kg = 1.0, reps = 1, done = true)).copy(routineId = routineId, startMs = startMs)
+        // C was never done: it goes first. Then A (older) before B.
+        assertEquals(c, Suggestions.nextRoutine(listOf(a, b, c), listOf(done(1, 100), done(2, 200))))
+        assertEquals(a, Suggestions.nextRoutine(listOf(a, b), listOf(done(1, 100), done(2, 200))))
+        assertEquals(b, Suggestions.nextRoutine(listOf(a, b), listOf(done(1, 300), done(2, 200), done(1, 50))))
+        assertEquals(null, Suggestions.nextRoutine(emptyList(), emptyList()))
     }
 }

@@ -180,7 +180,7 @@ fun AddCircleButton(added: Boolean, onClick: () -> Unit, description: String, mo
 @Composable
 fun DayStrip(
     selected: LocalDate,
-    onSelect: (LocalDate) -> Unit,
+    onSelect: ((LocalDate) -> Unit)?,
     modifier: Modifier = Modifier,
     marked: Set<LocalDate> = emptySet(),
 ) {
@@ -196,7 +196,7 @@ fun DayStrip(
                     .widthIn(min = 40.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(if (on) cs.primary else cs.surfaceContainer)
-                    .clickable { onSelect(d) }
+                    .then(if (onSelect != null) Modifier.clickable { onSelect(d) } else Modifier)
                     .padding(vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(2.dp),

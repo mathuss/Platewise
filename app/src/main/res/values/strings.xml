@@ -324,4 +324,55 @@
     <string name="kcal_per_day_goal">kcal per day · %s</string>
     <string name="bmr_chip">Basal %d</string>
     <string name="tdee_chip">Daily burn %d</string>
+
+    <!-- Redesign: exercise types and workout -->
+    <string name="type_weight_reps">Weight and reps</string>
+    <string name="type_reps_only">Reps only</string>
+    <string name="type_bodyweight_reps">Bodyweight reps</string>
+    <string name="type_bodyweight_assisted">Assisted bodyweight</string>
+    <string name="type_duration">Duration</string>
+    <string name="type_weight_duration">Weight and duration</string>
+    <string name="type_distance_duration">Distance and duration</string>
+    <string name="type_short_distance_weight">Weight and distance</string>
+    <string name="type_floors_duration">Floors and duration</string>
+    <string name="type_steps_duration">Steps and duration</string>
+    <string name="create_short">Create</string>
+    <string name="recent_exercises">Recent</string>
+    <string name="all_exercises_n">All (%d)</string>
+    <string name="next_routine">Your next routine</string>
+    <string name="this_week_n">This week: %d</string>
+    <string name="continue_workout">Continue</string>
+    <string name="set_progress">%1$d of %2$d sets</string>
+    <string name="time_label">Time</string>
+    <string name="volume_kg">kg volume</string>
+    <string name="series_label">sets</string>
+    <string name="kcal_label">kcal</string>
+    <string name="rest_title">Rest</string>
+    <string name="rest_plus">+15 s</string>
+    <string name="rename_workout">Rename</string>
+    <string name="summary_saved">Workout saved</string>
+    <string name="summary_duration">Duration</string>
+    <string name="summary_volume">Volume</string>
+    <string name="summary_sets">Sets completed</string>
+    <string name="summary_kcal">Estimated</string>
+    <string name="summary_records">Personal record</string>
+    <string name="summary_exercises">Exercises</string>
+    <string name="best_set">best %s</string>
+    <string name="sets_count_short">%d sets</string>
+    <string name="exercises_sets">%1$d exercises · %2$d sets</string>
+    <string name="workout_min">%d min</string>
+    <plurals name="sets_n">
+        <item quantity="one">%d set</item>
+        <item quantity="other">%d sets</item>
+    </plurals>
+    <plurals name="workouts_week">
+        <item quantity="one">%d workout this week</item>
+        <item quantity="other">%d workouts this week</item>
+    </plurals>
+
+    <!-- Redesign: picker selection -->
+    <plurals name="exercises_selected">
+        <item quantity="one">%d exercise selected</item>
+        <item quantity="other">%d exercises selected</item>
+    </plurals>
 </resources>

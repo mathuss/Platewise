@@ -327,4 +327,58 @@
     <string name="kcal_per_day_goal">kcal por día · %s</string>
     <string name="bmr_chip">Basal %d</string>
     <string name="tdee_chip">Gasto %d</string>
+
+    <!-- Redesign: exercise types and workout -->
+    <string name="type_weight_reps">Peso y repeticiones</string>
+    <string name="type_reps_only">Solo repeticiones</string>
+    <string name="type_bodyweight_reps">Repeticiones con peso corporal</string>
+    <string name="type_bodyweight_assisted">Peso corporal asistido</string>
+    <string name="type_duration">Duración</string>
+    <string name="type_weight_duration">Peso y duración</string>
+    <string name="type_distance_duration">Distancia y duración</string>
+    <string name="type_short_distance_weight">Peso y distancia</string>
+    <string name="type_floors_duration">Pisos y duración</string>
+    <string name="type_steps_duration">Pasos y duración</string>
+    <string name="create_short">Crear</string>
+    <string name="recent_exercises">Recientes</string>
+    <string name="all_exercises_n">Todos (%d)</string>
+    <string name="next_routine">Tu próxima rutina</string>
+    <string name="this_week_n">Esta semana: %d</string>
+    <string name="continue_workout">Continuar</string>
+    <string name="set_progress">%1$d de %2$d series</string>
+    <string name="time_label">Tiempo</string>
+    <string name="volume_kg">kg de volumen</string>
+    <string name="series_label">series</string>
+    <string name="kcal_label">kcal</string>
+    <string name="rest_title">Descanso</string>
+    <string name="rest_plus">+15 s</string>
+    <string name="rename_workout">Renombrar</string>
+    <string name="summary_saved">Entrenamiento guardado</string>
+    <string name="summary_duration">Duración</string>
+    <string name="summary_volume">Volumen</string>
+    <string name="summary_sets">Series completadas</string>
+    <string name="summary_kcal">Estimadas</string>
+    <string name="summary_records">Récord personal</string>
+    <string name="summary_exercises">Ejercicios</string>
+    <string name="best_set">mejor %s</string>
+    <string name="sets_count_short">%d series</string>
+    <string name="exercises_sets">%1$d ejercicios · %2$d series</string>
+    <string name="workout_min">%d min</string>
+    <plurals name="sets_n">
+        <item quantity="one">%d serie</item>
+        <item quantity="many">%d series</item>
+        <item quantity="other">%d series</item>
+    </plurals>
+    <plurals name="workouts_week">
+        <item quantity="one">%d entreno esta semana</item>
+        <item quantity="many">%d entrenos esta semana</item>
+        <item quantity="other">%d entrenos esta semana</item>
+    </plurals>
+
+    <!-- Redesign: picker selection -->
+    <plurals name="exercises_selected">
+        <item quantity="one">%d ejercicio elegido</item>
+        <item quantity="many">%d ejercicios elegidos</item>
+        <item quantity="other">%d ejercicios elegidos</item>
+    </plurals>
 </resources>

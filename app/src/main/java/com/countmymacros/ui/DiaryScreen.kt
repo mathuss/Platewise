@@ -1,6 +1,5 @@
 package com.countmymacros.ui
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,28 +19,28 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.countmymacros.R
@@ -50,39 +49,63 @@ import com.countmymacros.data.Macros
 import com.countmymacros.data.Meal
 import com.countmymacros.ui.theme.MacroColors
 import com.countmymacros.ui.theme.macroTextColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
 @Composable
-fun DiaryScreen(vm: AppViewModel, onOpenProfile: () -> Unit, modifier: Modifier = Modifier) {
+fun DiaryScreen(
+    vm: AppViewModel,
+    onOpenProfile: () -> Unit,
+    onOpenTrain: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val byMeal = vm.entries.groupBy { it.meal }
     val total = vm.entries.fold(Macros.ZERO) { acc, e -> acc + e.macros }
     val target = vm.targets.daily
 
+    // The dots under the week strip: days of this week with something logged.
+    val monday = vm.date.minusDays((vm.date.dayOfWeek.value - 1).toLong())
+    @Suppress("ProduceStateDoesNotAssignValue")
+    val logged by produceState(emptySet<LocalDate>(), monday, vm.entries) {
+        value = withContext(Dispatchers.IO) {
+            vm.repo.range(monday, monday.plusDays(6)).map { LocalDate.parse(it.date) }.toSet()
+        }
+    }
+
     LazyColumn(
         modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { DateBar(vm.date, vm::setDay) }
+        item { DayStrip(vm.date, vm::setDay, marked = logged) }
         if (!vm.profileSet) {
             item {
-                Card(
+                Surface(
                     onClick = onOpenProfile,
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                 ) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Filled.Tune, null)
-                        Column(Modifier.padding(start = 12.dp)) {
-                            Text(stringResource(R.string.setup_goals_title), fontWeight = FontWeight.SemiBold)
-                            Text(stringResource(R.string.setup_goals_body), style = MaterialTheme.typography.bodySmall)
-                        }
+                    Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.Tune, null, Modifier.size(20.dp))
+                        Text(
+                            stringResource(R.string.setup_goals_title),
+                            Modifier.weight(1f).padding(start = 10.dp),
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null)
                     }
                 }
             }
         }
-        item { SummaryCard(total, target, vm.burned) }
+        item { SummaryCard(total, target) }
+        if (vm.dayWorkouts.isNotEmpty()) {
+            item { WorkoutTile(vm, onOpenTrain) }
+        }
         items(Meal.entries.toList(), key = { it.name }) { meal ->
             MealCard(
                 meal = meal,
@@ -120,24 +143,13 @@ private fun DateBar(date: LocalDate, onDate: (LocalDate) -> Unit) {
     }
 }
 
-/** [burned] is shown for information only: the budget is the daily target, which the activity level already accounts for. */
+/** The day at a glance: a big ring with what is left, and the three macros in their colors. */
 @Composable
-private fun SummaryCard(total: Macros, target: Macros, burned: Double) {
-    val budget = target.kcal
-    Card(
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-    ) {
-        Column(Modifier.padding(16.dp)) {
+private fun SummaryCard(total: Macros, target: Macros) {
+    HeroCard {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CalorieRing(total.kcal, budget)
-                    Text(
-                        stringResource(R.string.kcal_of, total.kcal.roundToInt(), budget.roundToInt()),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                CalorieRing(total.kcal, target.kcal, size = 124.dp)
                 Spacer(Modifier.width(16.dp))
                 val (proteinText, carbsText, fatText) = macroTextColors()
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -146,14 +158,33 @@ private fun SummaryCard(total: Macros, target: Macros, burned: Double) {
                     MacroBar(stringResource(R.string.fat), total.fat, target.fat, MacroColors.Fat, fatText)
                 }
             }
-            if (burned > 0) {
+            Text(
+                stringResource(R.string.kcal_of, total.kcal.roundToInt(), target.kcal.roundToInt()),
+                Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.labelLarge,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/** Today's training, shown as information (it does not change the budget); tapping opens Train. */
+@Composable
+private fun WorkoutTile(vm: AppViewModel, onOpen: () -> Unit) {
+    val names = vm.dayWorkouts.joinToString(", ") { it.name }
+    val minutes = vm.dayWorkouts.sumOf { it.durationMin }
+    SurfaceCard(onClick = onOpen) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconBadge(Icons.Filled.LocalFireDepartment, warm = true)
+            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                Text(names, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    stringResource(R.string.burned_today, burned.roundToInt()),
-                    style = MaterialTheme.typography.labelLarge,
+                    "$minutes min · " + stringResource(R.string.burned_today, vm.burned.roundToInt()),
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp),
                 )
             }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -169,23 +200,22 @@ private fun MealCard(
     val sum = entries.fold(Macros.ZERO) { acc, e -> acc + e.macros }
     val mealName = stringResource(meal.label)
     var menu by remember { mutableStateOf(false) }
-    OutlinedCard(
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.outlinedCardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    ) {
-        Column(Modifier.padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)) {
+    SurfaceCard {
+        Column(Modifier.padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom) {
-                    Text(mealName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    if (entries.isNotEmpty()) {
-                        Text(
-                            stringResource(R.string.kcal_value, sum.kcal.roundToInt()),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(start = 8.dp),
-                        )
-                    }
+                IconBadge(mealIcon(meal), size = 34.dp)
+                Text(
+                    mealName,
+                    Modifier.weight(1f).padding(horizontal = 10.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (entries.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.kcal_value, sum.kcal.roundToInt()),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 }
                 Box {
                     IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, stringResource(R.string.more_options)) }
@@ -196,15 +226,23 @@ private fun MealCard(
                         )
                     }
                 }
-                FilledTonalIconButton(onClick = onAdd, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Filled.Add, stringResource(R.string.add_to_meal, mealName))
-                }
             }
-            if (entries.isNotEmpty()) {
-                entries.forEachIndexed { i, e ->
-                    if (i > 0) HorizontalDivider(Modifier.padding(end = 8.dp))
-                    EntryRow(e) { onEntry(e) }
-                }
+            entries.forEach { e ->
+                HorizontalDivider(Modifier.padding(end = 8.dp))
+                EntryRow(e) { onEntry(e) }
+            }
+            Row(
+                Modifier.fillMaxWidth().clickable(onClick = onAdd).padding(vertical = 10.dp, horizontal = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.Add, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                Text(
+                    stringResource(R.string.add_to_meal, mealName),
+                    Modifier.padding(start = 8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
             }
         }
     }
@@ -221,15 +259,15 @@ private fun EntryRow(e: Entry, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(e.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(e.name, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Medium)
             Text(
-                listOf(amountLabel(e), e.brand, macroSummary(e.macros)).filter { it.isNotBlank() }.joinToString(" · "),
+                listOf(amountLabel(e), e.brand).filter { it.isNotBlank() }.joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Text("${e.macros.kcal.roundToInt()}", style = MaterialTheme.typography.bodyMedium)
+        Text("${e.macros.kcal.roundToInt()}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
     }
 }

@@ -103,7 +103,8 @@ fun MacroBar(label: String, value: Double, target: Double, color: Color, textCol
 
 /** "P 20 · C 35 · F 10" (G in Spanish) with each letter in its macro color. */
 @Composable
-fun MacroLine(m: Macros, modifier: Modifier = Modifier) {
+fun MacroLine(m: Macros, modifier: Modifier = Modifier, whole: Boolean = false) {
+    fun num(v: Double) = if (whole) v.roundToInt().toString() else fmt(v)
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val (proteinColor, carbsColor, fatColor) = macroTextColors()
     val p = stringResource(R.string.letter_protein)
@@ -112,13 +113,13 @@ fun MacroLine(m: Macros, modifier: Modifier = Modifier) {
     Text(
         buildAnnotatedString {
             withStyle(SpanStyle(color = proteinColor, fontWeight = FontWeight.SemiBold)) { append("$p ") }
-            withStyle(SpanStyle(color = muted)) { append(fmt(m.protein)) }
+            withStyle(SpanStyle(color = muted)) { append(num(m.protein)) }
             withStyle(SpanStyle(color = muted)) { append("  ·  ") }
             withStyle(SpanStyle(color = carbsColor, fontWeight = FontWeight.SemiBold)) { append("$c ") }
-            withStyle(SpanStyle(color = muted)) { append(fmt(m.carbs)) }
+            withStyle(SpanStyle(color = muted)) { append(num(m.carbs)) }
             withStyle(SpanStyle(color = muted)) { append("  ·  ") }
             withStyle(SpanStyle(color = fatColor, fontWeight = FontWeight.SemiBold)) { append("$f ") }
-            withStyle(SpanStyle(color = muted)) { append(fmt(m.fat)) }
+            withStyle(SpanStyle(color = muted)) { append(num(m.fat)) }
         },
         style = MaterialTheme.typography.bodySmall,
         modifier = modifier,

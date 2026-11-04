@@ -127,7 +127,12 @@ private fun App(vm: AppViewModel) {
         ) { inner ->
             val m = Modifier.padding(inner)
             when (Tab.entries[tab]) {
-                Tab.DIARY -> DiaryScreen(vm, onOpenProfile = { tab = Tab.PROFILE.ordinal }, modifier = m)
+                Tab.DIARY -> DiaryScreen(
+                    vm,
+                    onOpenProfile = { tab = Tab.PROFILE.ordinal },
+                    onOpenTrain = { tab = Tab.TRAIN.ordinal },
+                    modifier = m,
+                )
                 Tab.TRAIN -> TrainScreen(vm, m)
                 Tab.PROGRESS -> ProgressScreen(vm, m)
                 Tab.PROFILE -> ProfileScreen(vm, m)

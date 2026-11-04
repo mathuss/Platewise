@@ -1,6 +1,25 @@
 package com.countmymacros.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -137,6 +156,13 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
         vm.sheet = FoodSheet(food, meal, preset = preset)
     }
 
+    /** The "+" button: adds the amount used last time for this food, or its default serving. */
+    fun quickAdd(food: Food) {
+        val last = recents.firstOrNull { it.foodKey == food.key }
+        val (sv, qty) = if (last != null) Serving(last.servingName, last.servingGrams) to last.quantity else food.defaultServing
+        vm.addFood(food, meal, sv.name, sv.grams, qty, silent = true)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -146,17 +172,41 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
                 },
             )
         },
+        bottomBar = {
+            if (vm.addedCount > 0) {
+                Surface(tonalElevation = 3.dp) {
+                    Row(
+                        Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                pluralStringResource(R.plurals.added_summary, vm.addedCount, vm.addedCount),
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Text(
+                                stringResource(R.string.added_kcal_in, vm.addedKcal.roundToInt(), stringResource(meal.label)),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Button(onClick = vm::pop) { Text(stringResource(R.string.done_action)) }
+                    }
+                }
+            }
+        },
     ) { inner ->
         LazyColumn(Modifier.fillMaxSize().padding(inner)) {
             item {
-                Column(Modifier.padding(horizontal = 16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            stringResource(R.string.add_to_prefix),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(end = 8.dp),
-                        )
-                        MealPicker(meal, { meal = it })
+                Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Meal.entries.forEach { m ->
+                            FilterChip(
+                                selected = m == meal,
+                                onClick = { meal = m },
+                                label = { Text(stringResource(m.label)) },
+                            )
+                        }
                     }
                     OutlinedTextField(
                         value = query,
@@ -168,40 +218,31 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
                                 IconButton(onClick = { query = ""; online = Online.Idle }) {
                                     Icon(Icons.Filled.Close, stringResource(R.string.clear))
                                 }
+                            } else {
+                                IconButton(onClick = ::scanBarcode) {
+                                    Icon(Icons.Filled.QrCodeScanner, stringResource(R.string.chip_barcode), tint = MaterialTheme.colorScheme.primary)
+                                }
                             }
                         },
                         singleLine = true,
+                        shape = RoundedCornerShape(28.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                            unfocusedBorderColor = Color.Transparent,
+                        ),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { searchOnline() }),
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    FlowRow(
-                        Modifier.padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        AssistChip(
-                            onClick = ::scanBarcode,
-                            label = { Text(stringResource(R.string.chip_barcode)) },
-                            leadingIcon = { Icon(Icons.Filled.QrCodeScanner, null, Modifier.size(18.dp)) },
-                        )
-                        AssistChip(
-                            onClick = { describeDialog = true },
-                            label = { Text(stringResource(R.string.chip_describe)) },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.ShortText, null, Modifier.size(18.dp)) },
-                        )
-                        AssistChip(
-                            onClick = { quickDialog = true },
-                            label = { Text(stringResource(R.string.chip_quick)) },
-                            leadingIcon = { Icon(Icons.Filled.Bolt, null, Modifier.size(18.dp)) },
-                        )
-                        AssistChip(
-                            onClick = { vm.push(Screen.CreateFood(meal)) },
-                            label = { Text(stringResource(R.string.chip_create)) },
-                            leadingIcon = { Icon(Icons.Filled.EditNote, null, Modifier.size(18.dp)) },
-                        )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        QuickAction(Icons.Filled.QrCodeScanner, stringResource(R.string.qa_scan), ::scanBarcode)
+                        QuickAction(Icons.AutoMirrored.Filled.ShortText, stringResource(R.string.chip_describe)) { describeDialog = true }
+                        QuickAction(Icons.Filled.Bolt, stringResource(R.string.chip_quick)) { quickDialog = true }
+                        QuickAction(Icons.Filled.EditNote, stringResource(R.string.qa_create)) { vm.push(Screen.CreateFood(meal)) }
                     }
                     if (vm.barcodeLoading) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                             Text(stringResource(R.string.looking_up_product), Modifier.padding(start = 8.dp))
                         }
@@ -213,15 +254,25 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
                 if (recents.isNotEmpty()) {
                     item { Header(stringResource(R.string.recents)) }
                     items(recents, key = { "r" + it.id }) { e ->
-                        FoodRow(e.asFood(), subtitle = amountLabel(e), kcal = e.macros.kcal) {
-                            open(e.asFood(), Serving(e.servingName, e.servingGrams) to e.quantity)
-                        }
+                        val food = e.asFood()
+                        FoodRow(
+                            food, e.macros, amountLabel(e), e.macros.kcal,
+                            added = food.key in vm.addedKeys,
+                            addDescription = stringResource(R.string.add_to_meal, stringResource(meal.label)),
+                            onAdd = { quickAdd(food) },
+                        ) { open(food, Serving(e.servingName, e.servingGrams) to e.quantity) }
                     }
                 }
                 if (myFoods.isNotEmpty()) {
                     item { Header(stringResource(R.string.my_foods)) }
                     items(myFoods, key = { "m" + it.key }) { f ->
-                        FoodRow(f, onDelete = { vm.deleteFood(f) }) { open(f) }
+                        FoodRow(
+                            f, f.per100, per100Label(f), f.per100.kcal,
+                            added = f.key in vm.addedKeys,
+                            addDescription = stringResource(R.string.add_to_meal, stringResource(meal.label)),
+                            onAdd = { quickAdd(f) },
+                            onDelete = { vm.deleteFood(f) },
+                        ) { open(f) }
                     }
                 }
                 if (recents.isEmpty() && myFoods.isEmpty()) {
@@ -235,7 +286,14 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
                     }
                 }
             } else {
-                items(local, key = { "l" + it.key }) { f -> FoodRow(f) { open(f) } }
+                items(local, key = { "l" + it.key }) { f ->
+                    FoodRow(
+                        f, f.per100, per100Label(f), f.per100.kcal,
+                        added = f.key in vm.addedKeys,
+                        addDescription = stringResource(R.string.add_to_meal, stringResource(meal.label)),
+                        onAdd = { quickAdd(f) },
+                    ) { open(f) }
+                }
                 item {
                     Column(Modifier.padding(16.dp)) {
                         when (val o = online) {
@@ -258,7 +316,14 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
                     }
                 }
                 val o = online
-                if (o is Online.Done) items(o.foods, key = { "o" + it.key }) { f -> FoodRow(f) { open(f) } }
+                if (o is Online.Done) items(o.foods, key = { "o" + it.key }) { f ->
+                    FoodRow(
+                        f, f.per100, per100Label(f), f.per100.kcal,
+                        added = f.key in vm.addedKeys,
+                        addDescription = stringResource(R.string.add_to_meal, stringResource(meal.label)),
+                        onAdd = { quickAdd(f) },
+                    ) { open(f) }
+                }
             }
         }
     }
@@ -302,46 +367,65 @@ private fun Header(text: String, inset: Boolean = true) {
     )
 }
 
+/** "100 g · Marca · Open Food Facts": what a search result says about itself. */
+@Composable
+private fun per100Label(f: Food): String {
+    val source = if (f.source == FoodSource.BASE) "" else stringResource(f.source.label)
+    return listOf(stringResource(R.string.per_100g_short), f.brand, source).filter { it.isNotBlank() }.joinToString(" · ")
+}
+
+@Composable
+private fun QuickAction(icon: ImageVector, label: String, onClick: () -> Unit) {
+    Column(
+        Modifier.width(76.dp).clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            Modifier.size(56.dp).clip(RoundedCornerShape(18.dp)).background(MaterialTheme.colorScheme.surfaceContainer),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary) }
+        Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
 @Composable
 private fun FoodRow(
     f: Food,
-    subtitle: String? = null,
-    kcal: Double? = null,
+    macros: Macros,
+    subtitle: String,
+    kcal: Double,
+    added: Boolean,
+    addDescription: String,
+    onAdd: () -> Unit,
     onDelete: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    val sourceLabel = stringResource(f.source.label)
-    val per100 = stringResource(R.string.per_100g)
-    Column {
-        Row(
-            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(f.name, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                val detail = subtitle
-                    ?: listOf(f.brand, if (f.source == FoodSource.BASE) "" else sourceLabel)
-                        .filter { it.isNotBlank() }.joinToString(" · ").ifEmpty { per100 }
-                Text(
-                    detail,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (kcal == null) MacroLine(f.per100)
-            }
+    val strong = MaterialTheme.colorScheme.onSurface
+    val kcalText = stringResource(R.string.kcal_value, kcal.roundToInt())
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconBadge(Icons.Filled.Restaurant, size = 44.dp)
+        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Text(f.name, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
-                if (kcal != null) stringResource(R.string.kcal_value, kcal.roundToInt())
-                else stringResource(R.string.kcal_per_100, f.per100.kcal.roundToInt()),
+                buildAnnotatedString {
+                    append("$subtitle · ")
+                    withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = strong)) { append(kcalText) }
+                },
                 style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = 8.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            if (onDelete != null) {
-                IconButton(onClick = onDelete) { Icon(Icons.Filled.DeleteOutline, stringResource(R.string.remove_from_my_foods)) }
-            }
+            MacroLine(macros, whole = true)
         }
-        HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+        if (onDelete != null) {
+            IconButton(onClick = onDelete) { Icon(Icons.Filled.DeleteOutline, stringResource(R.string.remove_from_my_foods)) }
+        }
+        AddCircleButton(added, onAdd, addDescription)
     }
 }
 

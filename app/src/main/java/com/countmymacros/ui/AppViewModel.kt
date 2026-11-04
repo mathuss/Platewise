@@ -157,6 +157,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             labelResult = null
             labelError = null
         }
+        if (s is Screen.AddFood) {
+            addedKeys.clear()
+            addedCount = 0
+            addedKcal = 0.0
+        }
         stack.add(s)
     }
 
@@ -166,7 +171,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // --- entries ---
 
-    fun addFood(food: Food, meal: Meal, servingName: String, servingGrams: Double, quantity: Double) {
+    /** What was added during the current visit to Add food: drives the ticks and the "Listo" bar. */
+    val addedKeys = mutableStateListOf<String>()
+    var addedCount by mutableIntStateOf(0); private set
+    var addedKcal by mutableStateOf(0.0); private set
+
+    /** [silent] skips the toast: the add screen shows a tick instead. */
+    fun addFood(food: Food, meal: Meal, servingName: String, servingGrams: Double, quantity: Double, silent: Boolean = false) {
         val e = Entry(
             date = date.toString(),
             meal = meal,
@@ -185,7 +196,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             repo.add(e)
         }
         if (food.source == FoodSource.OFF) foodsVersion++
-        toast = uiText(R.string.toast_added, food.name, uiText(meal.label))
+        addedKeys.add(food.key)
+        addedCount++
+        addedKcal += e.macros.kcal
+        if (!silent) toast = uiText(R.string.toast_added, food.name, uiText(meal.label))
     }
 
     fun deleteFood(food: Food) {

@@ -37,6 +37,10 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Installs next to the release build on the phone (different signing key) instead of replacing it.
+            applicationIdSuffix = ".debug"
+        }
         release {
             // Without a keystore, sign with the debug key: installable on your phone, not publishable.
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")

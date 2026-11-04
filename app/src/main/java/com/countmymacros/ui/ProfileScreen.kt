@@ -82,7 +82,10 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+        Card(
+            Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        ) {
             Column(Modifier.padding(16.dp).fillMaxWidth()) {
                 Text(stringResource(R.string.daily_goal), style = MaterialTheme.typography.labelLarge)
                 Text(
@@ -131,6 +134,12 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
             current = "${stringResource(p.activity.label)} — ${stringResource(p.activity.detail)}",
             options = ActivityLevel.entries.map { "${stringResource(it.label)} — ${stringResource(it.detail)}" },
         ) { vm.saveProfile(p.copy(activity = ActivityLevel.entries[it])) }
+        Text(
+            stringResource(R.string.activity_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 6.dp),
+        )
 
         SectionTitle(stringResource(R.string.goal_title))
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {

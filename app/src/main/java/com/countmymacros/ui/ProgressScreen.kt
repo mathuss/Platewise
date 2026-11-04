@@ -72,7 +72,7 @@ fun ProgressScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Card {
+            Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
                     Text(stringResource(R.string.calories_7days), style = MaterialTheme.typography.titleMedium)
                     WeekChart(days, perDay.map { it.kcal }, target.kcal)
@@ -80,7 +80,7 @@ fun ProgressScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
         item {
-            Card {
+            Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(stringResource(R.string.daily_average), style = MaterialTheme.typography.titleMedium)
                     if (logged.isEmpty()) {
@@ -155,7 +155,7 @@ private fun WeekChart(days: List<LocalDate>, kcal: List<Double>, target: Double)
 @Composable
 private fun WeightCard(vm: AppViewModel) {
     var text by remember { mutableStateOf("") }
-    Card {
+    Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(stringResource(R.string.weight_title), style = MaterialTheme.typography.titleMedium)
             val latest = vm.weights.firstOrNull()

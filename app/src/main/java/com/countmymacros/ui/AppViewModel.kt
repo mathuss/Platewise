@@ -119,7 +119,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var routines by mutableStateOf<List<Routine>>(emptyList()); private set
     var recentWorkouts by mutableStateOf<List<Workout>>(emptyList()); private set
 
-    /** Workouts finished on the diary's day; their calories add to that day's food budget. */
+    /** Workouts finished on the diary's day. Their calories are shown, not added to the budget: the activity level already counts exercise. */
     var dayWorkouts by mutableStateOf<List<Workout>>(emptyList()); private set
     val burned: Double get() = dayWorkouts.sumOf { it.kcal }
 

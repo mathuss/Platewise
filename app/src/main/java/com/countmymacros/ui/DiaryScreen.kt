@@ -69,6 +69,7 @@ fun DiaryScreen(vm: AppViewModel, onOpenProfile: () -> Unit, modifier: Modifier 
             item {
                 Card(
                     onClick = onOpenProfile,
+                    modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
                 ) {
                     Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -81,7 +82,7 @@ fun DiaryScreen(vm: AppViewModel, onOpenProfile: () -> Unit, modifier: Modifier 
                 }
             }
         }
-        item { SummaryCard(total, target) }
+        item { SummaryCard(total, target, vm.burned) }
         items(Meal.entries.toList(), key = { it.name }) { meal ->
             MealCard(
                 meal = meal,
@@ -119,27 +120,39 @@ private fun DateBar(date: LocalDate, onDate: (LocalDate) -> Unit) {
     }
 }
 
+/** [burned] is shown for information only: the budget is the daily target, which the activity level already accounts for. */
 @Composable
-private fun SummaryCard(total: Macros, target: Macros) {
+private fun SummaryCard(total: Macros, target: Macros, burned: Double) {
+    val budget = target.kcal
     Card(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CalorieRing(total.kcal, target.kcal)
-                Text(
-                    stringResource(R.string.kcal_of, total.kcal.roundToInt(), target.kcal.roundToInt()),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CalorieRing(total.kcal, budget)
+                    Text(
+                        stringResource(R.string.kcal_of, total.kcal.roundToInt(), budget.roundToInt()),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(16.dp))
+                val (proteinText, carbsText, fatText) = macroTextColors()
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MacroBar(stringResource(R.string.protein), total.protein, target.protein, MacroColors.Protein, proteinText)
+                    MacroBar(stringResource(R.string.carbs), total.carbs, target.carbs, MacroColors.Carbs, carbsText)
+                    MacroBar(stringResource(R.string.fat), total.fat, target.fat, MacroColors.Fat, fatText)
+                }
             }
-            Spacer(Modifier.width(16.dp))
-            val (proteinText, carbsText, fatText) = macroTextColors()
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                MacroBar(stringResource(R.string.protein), total.protein, target.protein, MacroColors.Protein, proteinText)
-                MacroBar(stringResource(R.string.carbs), total.carbs, target.carbs, MacroColors.Carbs, carbsText)
-                MacroBar(stringResource(R.string.fat), total.fat, target.fat, MacroColors.Fat, fatText)
+            if (burned > 0) {
+                Text(
+                    stringResource(R.string.burned_today, burned.roundToInt()),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
             }
         }
     }

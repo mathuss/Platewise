@@ -247,12 +247,13 @@
     <string name="workout_duration">Duration (min)</string>
     <string name="workout_stats">%1$d min · %2$d sets · %3$s kg · %4$d kcal</string>
     <string name="workout_row">%1$s · %2$d min · %3$d kcal</string>
-    <string name="burned_today">+%d kcal from training</string>
+    <string name="burned_today">You burned %d kcal training</string>
     <string name="delete_routine_title">Delete this routine?</string>
+    <string name="delete_workout_title">Delete this workout?</string>
     <string name="toast_workout_saved">Workout saved · %d kcal burned</string>
     <string name="toast_no_sets">Mark at least one set as done first</string>
     <string name="previous">Previous</string>
-    <string name="activity_note">If you log your workouts, choose the activity level without your training so it isn\'t counted twice.</string>
+    <string name="activity_note">Logged workouts don\'t change your daily target: the activity level already counts your weekly exercise.</string>
     <string name="set_normal">Normal</string>
     <string name="set_warmup">Warm-up</string>
     <string name="set_dropset">Drop set</string>

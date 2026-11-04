@@ -25,6 +25,12 @@ del APK original ([docs/ANALISIS_FITIA.md](docs/ANALISIS_FITIA.md)).
   con % de déficit o superávit) y distribución de macros (equilibrada, alta en proteína,
   baja en carbos, baja en grasas, keto o personalizada).
 - **Progreso**: calorías de los últimos 7 días, promedio de macros y registro de peso.
+- **Entrenar**: rutinas con ejercicios, series (normal, calentamiento, drop set, al fallo) y
+  descanso; entrenamiento en vivo con cronómetro y temporizador de descanso, o registrado
+  después con fecha y duración. Catálogo de 454 ejercicios en inglés y español
+  ([docs/ANALISIS_HEVY.md](docs/ANALISIS_HEVY.md)). Las calorías quemadas (MET 5,0 × tu peso
+  × horas) se muestran en el Diario como dato; el objetivo diario sigue dependiendo del nivel
+  de actividad, que ya cuenta tu ejercicio semanal.
 - **Inglés o español**: sigue el idioma del teléfono, o se elige en **Perfil → Idioma**
   (Sistema / English / Español; en Android 13+ también desde Ajustes del sistema). Open
   Food Facts usa el nombre del producto en ese idioma y la base local tiene ambos nombres (buscás "pollo" o "chicken" y aparece igual).
@@ -42,7 +48,7 @@ Requisitos (ya presentes en esta máquina): Android SDK `platform android-35` (e
 `C:\Users\Thiago\AppData\Local\Android\Sdk`, referenciado por `local.properties`) y JDK 17.
 
 ```powershell
-$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.21.9-hotspot"
 .\gradlew.bat :app:testDebugUnitTest   # tests
 .\gradlew.bat :app:assembleRelease     # APK minificado → app/build/outputs/apk/release/
 ```

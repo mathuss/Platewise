@@ -249,12 +249,13 @@
     <string name="workout_duration">Duración (min)</string>
     <string name="workout_stats">%1$d min · %2$d series · %3$s kg · %4$d kcal</string>
     <string name="workout_row">%1$s · %2$d min · %3$d kcal</string>
-    <string name="burned_today">+%d kcal de entrenamiento</string>
+    <string name="burned_today">Quemaste %d kcal entrenando</string>
     <string name="delete_routine_title">¿Eliminar esta rutina?</string>
+    <string name="delete_workout_title">¿Eliminar este entrenamiento?</string>
     <string name="toast_workout_saved">Entrenamiento guardado · %d kcal quemadas</string>
     <string name="toast_no_sets">Marcá al menos una serie como hecha</string>
     <string name="previous">Anterior</string>
-    <string name="activity_note">Si registrás tus entrenamientos, elegí la actividad sin contar el entrenamiento, para no sumarlo dos veces.</string>
+    <string name="activity_note">Los entrenamientos que registrás no cambian tu objetivo diario: el nivel de actividad ya cuenta tu ejercicio semanal.</string>
     <string name="set_normal">Normal</string>
     <string name="set_warmup">Calentamiento</string>
     <string name="set_dropset">Drop set</string>

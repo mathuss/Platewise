@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.Icon
@@ -41,10 +42,14 @@ import com.countmymacros.ui.AppViewModel
 import com.countmymacros.ui.CreateFoodScreen
 import com.countmymacros.ui.DescribeScreen
 import com.countmymacros.ui.DiaryScreen
+import com.countmymacros.ui.ExercisePickerScreen
 import com.countmymacros.ui.FoodSheetHost
 import com.countmymacros.ui.ProfileScreen
 import com.countmymacros.ui.ProgressScreen
+import com.countmymacros.ui.RoutineEditorScreen
 import com.countmymacros.ui.Screen
+import com.countmymacros.ui.TrainScreen
+import com.countmymacros.ui.WorkoutScreen
 import com.countmymacros.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
@@ -65,6 +70,7 @@ class MainActivity : ComponentActivity() {
 
 private enum class Tab(@StringRes val label: Int) {
     DIARY(R.string.tab_diary),
+    TRAIN(R.string.tab_train),
     PROGRESS(R.string.tab_progress),
     PROFILE(R.string.tab_profile),
 }
@@ -90,6 +96,9 @@ private fun App(vm: AppViewModel) {
         is Screen.AddFood -> AddFoodScreen(vm, top.meal)
         is Screen.Describe -> DescribeScreen(vm, top.meal)
         is Screen.CreateFood -> CreateFoodScreen(vm, top.meal, top.barcode)
+        Screen.EditRoutine -> RoutineEditorScreen(vm)
+        Screen.PickExercises -> ExercisePickerScreen(vm)
+        Screen.RunWorkout -> WorkoutScreen(vm)
         null -> Scaffold(
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {
@@ -103,6 +112,7 @@ private fun App(vm: AppViewModel) {
                                 Icon(
                                     when (t) {
                                         Tab.DIARY -> Icons.Filled.Restaurant
+                                        Tab.TRAIN -> Icons.Filled.FitnessCenter
                                         Tab.PROGRESS -> Icons.AutoMirrored.Filled.ShowChart
                                         Tab.PROFILE -> Icons.Filled.Person
                                     },
@@ -117,7 +127,8 @@ private fun App(vm: AppViewModel) {
         ) { inner ->
             val m = Modifier.padding(inner)
             when (Tab.entries[tab]) {
-                Tab.DIARY -> DiaryScreen(vm, onOpenProfile = { tab = 2 }, modifier = m)
+                Tab.DIARY -> DiaryScreen(vm, onOpenProfile = { tab = Tab.PROFILE.ordinal }, modifier = m)
+                Tab.TRAIN -> TrainScreen(vm, m)
                 Tab.PROGRESS -> ProgressScreen(vm, m)
                 Tab.PROFILE -> ProfileScreen(vm, m)
             }

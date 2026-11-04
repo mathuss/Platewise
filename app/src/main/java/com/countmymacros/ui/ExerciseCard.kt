@@ -52,13 +52,15 @@ import com.countmymacros.data.fmt
 import com.countmymacros.data.parseNum
 import kotlin.math.roundToInt
 
-private fun shown(v: Double) = if (v == 0.0) "" else fmt(v)
+/** [pad] > 0 shows a whole number with leading zeros (minutes: "04"), zero included. */
+private fun shown(v: Double, pad: Int = 0) =
+    if (pad > 0) v.roundToInt().toString().padStart(pad, '0') else if (v == 0.0) "" else fmt(v)
 
 /** Short numeric cell: keeps what's being typed ("7,") while the model holds the parsed value. */
 @Composable
-fun NumCell(value: Double, onValue: (Double) -> Unit, modifier: Modifier = Modifier, placeholder: String = "0") {
-    var text by remember { mutableStateOf(shown(value)) }
-    if ((parseNum(text) ?: 0.0) != value) text = shown(value)
+fun NumCell(value: Double, onValue: (Double) -> Unit, modifier: Modifier = Modifier, placeholder: String = "0", pad: Int = 0) {
+    var text by remember { mutableStateOf(shown(value, pad)) }
+    if ((parseNum(text) ?: 0.0) != value) text = shown(value, pad)
     OutlinedTextField(
         value = text,
         onValueChange = { t ->
@@ -116,6 +118,7 @@ fun ExerciseCard(
 ) {
     val fields = exercise?.type?.fields ?: listOf(SetField.KG, SetField.REPS)
     var menu by remember { mutableStateOf(false) }
+    val markDone = stringResource(R.string.mark_set_done)
     OutlinedCard {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -181,7 +184,7 @@ fun ExerciseCard(
                         Checkbox(
                             checked = set.done,
                             onCheckedChange = { onChange(item.copy(sets = item.sets.replaced(i, set.copy(done = it)))) },
-                            modifier = Modifier.size(38.dp),
+                            modifier = Modifier.size(38.dp).semantics { contentDescription = markDone },
                         )
                     }
                     IconButton(onClick = { onChange(item.copy(sets = item.sets.filterIndexed { j, _ -> j != i })) }, Modifier.size(30.dp)) {
@@ -198,7 +201,10 @@ fun ExerciseCard(
     }
 }
 
-private fun <T> List<T>.replaced(i: Int, v: T) = mapIndexed { j, x -> if (j == i) v else x }
+internal fun <T> List<T>.replaced(i: Int, v: T) = mapIndexed { j, x -> if (j == i) v else x }
+
+/** The list with the element at [from] moved to position [to]. */
+internal fun <T> List<T>.moved(from: Int, to: Int): List<T> = toMutableList().apply { add(to, removeAt(from)) }
 
 /** The set number, or W / D / F for warm-up, drop set and failure; tap to cycle the type. */
 @Composable

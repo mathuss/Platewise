@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -251,7 +252,8 @@ private fun KcalChart(
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (d == today) FontWeight.Bold else FontWeight.Normal,
                 color = if (d == today) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
+                // The 30-day slots are narrower than their labels: let the text overflow its slot evenly instead of clipping.
+                modifier = Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally, unbounded = true),
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 softWrap = false,
@@ -289,10 +291,13 @@ private fun WeightCard(vm: AppViewModel, large: Boolean) {
                         Text(fmt(latest.kg), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
                         Text(" kg", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 6.dp))
                     }
-                    Sparkline(
-                        vm.weights.take(60).map { it.kg }.reversed(),
-                        Modifier.weight(1f).height(if (large) 120.dp else 48.dp),
-                    )
+                    // A single weigh-in is a dot, not a trend: wait for a second one.
+                    if (vm.weights.size >= 2) {
+                        Sparkline(
+                            vm.weights.take(60).map { it.kg }.reversed(),
+                            Modifier.weight(1f).height(if (large) 120.dp else 48.dp),
+                        )
+                    }
                 }
                 if (diff != null && first != null) {
                     Text(

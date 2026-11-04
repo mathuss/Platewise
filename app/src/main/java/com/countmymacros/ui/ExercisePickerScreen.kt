@@ -203,11 +203,13 @@ private fun PickerHeader(text: String) {
 
 @Composable
 private fun PickerRow(e: Exercise, female: Boolean, checked: Boolean, onClick: () -> Unit) {
+    var zoom by remember { mutableStateOf(false) }
+    if (zoom) ExercisePhotoDialog(e, female) { zoom = false }
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ExerciseThumb(e, female, size = 56.dp)
+        ExerciseThumb(e, female, size = 56.dp, onClick = { zoom = true })
         Column(Modifier.weight(1f).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(e.name(Lang.current), fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

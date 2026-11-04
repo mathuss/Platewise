@@ -159,7 +159,7 @@ fun WorkoutScreen(vm: AppViewModel) {
                     Button(
                         onClick = vm::finishSession,
                         enabled = s.live || s.durationMin > 0,
-                        modifier = Modifier.padding(end = 8.dp),
+                        modifier = Modifier.padding(end = 12.dp),
                     ) { Text(stringResource(R.string.finish)) }
                 },
             )

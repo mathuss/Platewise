@@ -130,8 +130,9 @@ private fun WorkoutSet.with(f: SetField, v: Double) = when (f) {
 fun WorkoutSet.describe(fields: List<SetField>): String =
     fields.joinToString(" · ") { "${fmt(get(it))} ${it.label()}" }
 
-/** "60×8": what was done last time, short enough for a narrow column. */
-private fun WorkoutSet.compact(fields: List<SetField>): String = fields.joinToString("×") { fmt(get(it)) }
+/** "60×8": what was done last time, short enough for a narrow column. A set ticked with nothing typed shows "–". */
+private fun WorkoutSet.compact(fields: List<SetField>): String =
+    if (fields.all { get(it) == 0.0 }) "–" else fields.joinToString("×") { fmt(get(it)) }
 
 /**
  * One exercise with its sets: a header (photo, name, muscle, rest), a row per set (type, what was
@@ -241,7 +242,10 @@ fun ExerciseCard(
                                 .semantics { contentDescription = markDone },
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (set.done) Icon(Icons.Filled.Check, null, Modifier.size(20.dp), tint = cs.onPrimary)
+                            Icon(
+                                Icons.Filled.Check, null, Modifier.size(20.dp),
+                                tint = if (set.done) cs.onPrimary else muted.copy(alpha = 0.4f),
+                            )
                         }
                     }
                     IconButton(onClick = { onChange(item.copy(sets = item.sets.filterIndexed { j, _ -> j != i })) }, Modifier.size(28.dp)) {

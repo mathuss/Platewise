@@ -289,4 +289,42 @@
     <string name="equip_suspension">Suspensión</string>
     <string name="equip_none">Sin equipo</string>
     <string name="equip_other">Otro</string>
+
+    <!-- Redesign: add food -->
+    <string name="qa_scan">Escanear</string>
+    <string name="qa_create">Crear</string>
+    <string name="added_kcal_in">%1$d kcal en %2$s</string>
+    <string name="done_action">Listo</string>
+    <string name="per_100g_short">100 g</string>
+    <plurals name="added_summary">
+        <item quantity="one">%d alimento agregado</item>
+        <item quantity="many">%d alimentos agregados</item>
+        <item quantity="other">%d alimentos agregados</item>
+    </plurals>
+
+    <!-- Redesign: quantity sheet -->
+    <string name="less">Menos</string>
+    <string name="more">Más</string>
+    <string name="left_today">Te quedan hoy</string>
+    <string name="after_line">Con este alimento llegás a %d kcal.</string>
+    <string name="over_line">Este alimento te pasa %d kcal del objetivo.</string>
+    <string name="add_with_kcal">Agregar · %d kcal</string>
+
+    <!-- Redesign: progress -->
+    <string name="period_7">7 días</string>
+    <string name="period_30">30 días</string>
+    <string name="calories_per_day">Calorías por día</string>
+    <string name="target_label">objetivo %d</string>
+    <string name="progress_empty">Registrá tu primera comida y acá vas a ver tu semana.</string>
+    <string name="stat_avg">kcal promedio</string>
+    <string name="stat_on_target">días en objetivo</string>
+    <string name="stat_streak">días seguidos</string>
+    <string name="on_target_value">%1$d de %2$d</string>
+    <string name="weight_empty">Registrá tu peso para ver cómo cambia.</string>
+    <string name="log_weight_today">Registrar peso de hoy</string>
+
+    <!-- Redesign: profile -->
+    <string name="kcal_per_day_goal">kcal por día · %s</string>
+    <string name="bmr_chip">Basal %d</string>
+    <string name="tdee_chip">Gasto %d</string>
 </resources>

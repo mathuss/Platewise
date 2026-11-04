@@ -287,4 +287,41 @@
     <string name="equip_suspension">Suspension</string>
     <string name="equip_none">No equipment</string>
     <string name="equip_other">Other</string>
+
+    <!-- Redesign: add food -->
+    <string name="qa_scan">Scan</string>
+    <string name="qa_create">Create</string>
+    <string name="added_kcal_in">%1$d kcal in %2$s</string>
+    <string name="done_action">Done</string>
+    <string name="per_100g_short">100 g</string>
+    <plurals name="added_summary">
+        <item quantity="one">%d food added</item>
+        <item quantity="other">%d foods added</item>
+    </plurals>
+
+    <!-- Redesign: quantity sheet -->
+    <string name="less">Less</string>
+    <string name="more">More</string>
+    <string name="left_today">Left today</string>
+    <string name="after_line">With this food you reach %d kcal.</string>
+    <string name="over_line">This food takes you %d kcal over your target.</string>
+    <string name="add_with_kcal">Add · %d kcal</string>
+
+    <!-- Redesign: progress -->
+    <string name="period_7">7 days</string>
+    <string name="period_30">30 days</string>
+    <string name="calories_per_day">Calories per day</string>
+    <string name="target_label">target %d</string>
+    <string name="progress_empty">Log your first meal and your week will show up here.</string>
+    <string name="stat_avg">kcal average</string>
+    <string name="stat_on_target">days on target</string>
+    <string name="stat_streak">day streak</string>
+    <string name="on_target_value">%1$d of %2$d</string>
+    <string name="weight_empty">Log your weight to see how it changes.</string>
+    <string name="log_weight_today">Log today\'s weight</string>
+
+    <!-- Redesign: profile -->
+    <string name="kcal_per_day_goal">kcal per day · %s</string>
+    <string name="bmr_chip">Basal %d</string>
+    <string name="tdee_chip">Daily burn %d</string>
 </resources>

@@ -1,25 +1,39 @@
 package com.countmymacros.ui
 
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -30,6 +44,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -38,11 +53,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.countmymacros.R
 import com.countmymacros.data.Burn
+import com.countmymacros.data.Lang
 import com.countmymacros.data.Sex
 import com.countmymacros.data.Workout
 import com.countmymacros.data.fmt
@@ -51,6 +69,16 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlin.math.roundToInt
+
+/** mm:ss, or h:mm:ss past the hour. */
+internal fun clock(totalSeconds: Long): String {
+    val s = totalSeconds.coerceAtLeast(0)
+    val h = s / 3600
+    val m = (s % 3600) / 60
+    val sec = s % 60
+    val two = { n: Long -> n.toString().padStart(2, '0') }
+    return if (h > 0) "$h:${two(m)}:${two(sec)}" else "${two(m)}:${two(sec)}"
+}
 
 /**
  * A workout being recorded. Live ones run a clock and a rest timer that starts when a set is
@@ -64,6 +92,7 @@ fun WorkoutScreen(vm: AppViewModel) {
         LaunchedEffect(Unit) { vm.pop() }
         return
     }
+    val view = LocalView.current
     val female = vm.profile.sex == Sex.FEMALE
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     if (s.live) {
@@ -74,18 +103,51 @@ fun WorkoutScreen(vm: AppViewModel) {
             }
         }
     }
+    // The screen stays on while you train, so you don't unlock the phone between sets.
+    DisposableEffect(s.live) {
+        if (s.live) view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
+    }
 
     val endMs = if (s.live) now else s.startMs + s.durationMin * 60_000L
     val seconds = ((endMs - s.startMs) / 1000).coerceAtLeast(0)
     val kcal = Burn.kcal(seconds, vm.profile.weightKg)
     val setsDone = s.exercises.sumOf { e -> e.sets.count { it.done } }
-    val restLeft = if (s.live) ((s.restEndMs - now) / 1000).coerceAtLeast(0) else 0L
+    val setsTotal = s.exercises.sumOf { it.sets.size }
+    val restLeft = if (s.live) ((s.restEndMs - now + 999) / 1000).coerceAtLeast(0) else 0L
+    var restTotal by remember { mutableLongStateOf(90L) }
+    var restFor by remember { mutableStateOf("") }
+    var wasResting by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf(false) }
+
+    // When the rest runs out: a short buzz and beep (not when it was skipped).
+    LaunchedEffect(restLeft > 0) {
+        if (restLeft > 0) wasResting = true
+        else if (wasResting) {
+            wasResting = false
+            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            runCatching {
+                val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
+                tone.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
+                delay(400)
+                tone.release()
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(s.name) },
+                title = {
+                    Row(Modifier.clickable { renaming = true }, verticalAlignment = Alignment.CenterVertically) {
+                        Text(s.name, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
+                        Icon(
+                            Icons.Filled.Edit, stringResource(R.string.rename_workout),
+                            Modifier.padding(start = 8.dp).size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = {
                         // A workout logged after the fact isn't saved anywhere until finished, so leaving drops it.
@@ -94,26 +156,59 @@ fun WorkoutScreen(vm: AppViewModel) {
                     }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back)) }
                 },
                 actions = {
-                    TextButton(onClick = vm::finishSession, enabled = s.live || s.durationMin > 0) {
-                        Text(stringResource(R.string.finish))
-                    }
+                    Button(
+                        onClick = vm::finishSession,
+                        enabled = s.live || s.durationMin > 0,
+                        modifier = Modifier.padding(end = 8.dp),
+                    ) { Text(stringResource(R.string.finish)) }
                 },
             )
         },
         bottomBar = {
             if (restLeft > 0) {
-                Surface(tonalElevation = 3.dp) {
-                    Row(
-                        Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            stringResource(R.string.rest_left, "${restLeft / 60}:${(restLeft % 60).toString().padStart(2, '0')}"),
-                            Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                        TextButton(onClick = { vm.updateSession(s.copy(restEndMs = 0)) }) { Text(stringResource(R.string.skip)) }
+                Surface(
+                    shape = RoundedCornerShape(26.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    tonalElevation = 6.dp,
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+                ) {
+                    Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                progress = { (restLeft.toFloat() / restTotal.coerceAtLeast(1)).coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxSize(),
+                                strokeWidth = 4.dp,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            )
+                            Text(clock(restLeft), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                        }
+                        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                            Text(stringResource(R.string.rest_title), fontWeight = FontWeight.SemiBold)
+                            if (restFor.isNotBlank()) {
+                                Text(
+                                    restFor,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                )
+                            }
+                        }
+                        FilledTonalButton(
+                            onClick = {
+                                restTotal += 15
+                                vm.updateSession(s.copy(restEndMs = s.restEndMs + 15_000))
+                            },
+                            contentPadding = PaddingValues(horizontal = 12.dp),
+                        ) { Text(stringResource(R.string.rest_plus)) }
+                        Button(
+                            onClick = {
+                                wasResting = false
+                                vm.updateSession(s.copy(restEndMs = 0))
+                            },
+                            Modifier.padding(start = 6.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp),
+                        ) { Text(stringResource(R.string.skip)) }
                     }
                 }
             }
@@ -124,31 +219,44 @@ fun WorkoutScreen(vm: AppViewModel) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item {
-                OutlinedTextField(
-                    value = s.name,
-                    onValueChange = { vm.updateSession(s.copy(name = it)) },
-                    label = { Text(stringResource(R.string.workout_name)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
             if (!s.live) {
                 item { LoggedTimeFields(s, vm::updateSession) }
             }
             item {
-                Text(
-                    stringResource(
-                        R.string.workout_stats,
-                        (seconds / 60).toInt(), setsDone, fmt(Workout.volumeKg(s.exercises)), kcal.roundToInt(),
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.time_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                if (s.live) clock(seconds) else "${seconds / 60} min",
+                                style = MaterialTheme.typography.displayMedium,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                        Text(
+                            stringResource(R.string.set_progress, setsDone, setsTotal),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    LinearProgressIndicator(
+                        progress = { if (setsTotal == 0) 0f else setsDone.toFloat() / setsTotal },
+                        modifier = Modifier.fillMaxWidth().height(6.dp),
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        strokeCap = StrokeCap.Round,
+                        drawStopIndicator = {},
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        StatTile(fmt(Workout.volumeKg(s.exercises)), stringResource(R.string.volume_kg), Modifier.weight(1f))
+                        StatTile("$setsDone", stringResource(R.string.series_label), Modifier.weight(1f))
+                        StatTile("${kcal.roundToInt()}", stringResource(R.string.kcal_label), Modifier.weight(1f))
+                    }
+                }
             }
             itemsIndexed(s.exercises) { i, item ->
+                val exercise = vm.exercise(item.exerciseId)
                 ExerciseCard(
-                    exercise = vm.exercise(item.exerciseId),
+                    exercise = exercise,
                     item = item,
                     previous = vm.previous[item.exerciseId].orEmpty(),
                     showDone = true,
@@ -156,6 +264,10 @@ fun WorkoutScreen(vm: AppViewModel) {
                     onChange = { changed ->
                         // Ticking a set starts that exercise's rest timer.
                         val ticked = changed.sets.count { it.done } > item.sets.count { it.done }
+                        if (s.live && ticked) {
+                            restTotal = changed.restSeconds.toLong().coerceAtLeast(1)
+                            restFor = (exercise?.name(Lang.current) ?: "") + " · " + changed.sets.count { it.done } + "/" + changed.sets.size
+                        }
                         val restEnd = if (s.live && ticked) System.currentTimeMillis() + changed.restSeconds * 1000L else s.restEndMs
                         vm.updateSession(s.copy(exercises = s.exercises.replaced(i, changed), restEndMs = restEnd))
                     },
@@ -189,6 +301,21 @@ fun WorkoutScreen(vm: AppViewModel) {
             onDismiss = { confirmDiscard = false },
         )
     }
+    if (renaming) {
+        AlertDialog(
+            onDismissRequest = { renaming = false },
+            title = { Text(stringResource(R.string.workout_name)) },
+            text = {
+                OutlinedTextField(
+                    value = s.name,
+                    onValueChange = { vm.updateSession(s.copy(name = it)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            },
+            confirmButton = { TextButton(onClick = { renaming = false }) { Text(stringResource(R.string.done_action)) } },
+        )
+    }
 }
 
 /** Date, start time and duration of a workout that already happened. */
@@ -199,33 +326,35 @@ private fun LoggedTimeFields(s: Session, onChange: (Session) -> Unit) {
     val start = Instant.ofEpochMilli(s.startMs).atZone(zone)
     var picking by remember { mutableStateOf(false) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.workout_date), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            OutlinedButton(onClick = { picking = true }) { Text(fullDate(s.date)) }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.workout_start), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            NumCell(
-                start.hour.toDouble(),
-                { onChange(s.copy(startMs = start.withHour(it.roundToInt().coerceIn(0, 23)).toInstant().toEpochMilli())) },
-                Modifier.width(72.dp),
-            )
-            Text("  :  ")
-            NumCell(
-                start.minute.toDouble(),
-                { onChange(s.copy(startMs = start.withMinute(it.roundToInt().coerceIn(0, 59)).toInstant().toEpochMilli())) },
-                Modifier.width(72.dp),
-                pad = 2,
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.workout_duration), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-            NumCell(
-                s.durationMin.toDouble(),
-                { onChange(s.copy(durationMin = it.roundToInt().coerceIn(0, 24 * 60))) },
-                Modifier.width(96.dp),
-            )
+    SurfaceCard {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.workout_date), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                OutlinedButton(onClick = { picking = true }) { Text(fullDate(s.date)) }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.workout_start), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                NumCell(
+                    start.hour.toDouble(),
+                    { onChange(s.copy(startMs = start.withHour(it.roundToInt().coerceIn(0, 23)).toInstant().toEpochMilli())) },
+                    Modifier.width(72.dp),
+                )
+                Text("  :  ")
+                NumCell(
+                    start.minute.toDouble(),
+                    { onChange(s.copy(startMs = start.withMinute(it.roundToInt().coerceIn(0, 59)).toInstant().toEpochMilli())) },
+                    Modifier.width(72.dp),
+                    pad = 2,
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(stringResource(R.string.workout_duration), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                NumCell(
+                    s.durationMin.toDouble(),
+                    { onChange(s.copy(durationMin = it.roundToInt().coerceIn(0, 24 * 60))) },
+                    Modifier.width(96.dp),
+                )
+            }
         }
     }
 

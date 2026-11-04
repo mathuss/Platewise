@@ -1,7 +1,5 @@
 package com.countmymacros.ui
 
-import android.media.AudioManager
-import android.media.ToneGenerator
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -121,18 +119,13 @@ fun WorkoutScreen(vm: AppViewModel) {
     var confirmDiscard by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
 
-    // When the rest runs out: a short buzz and beep (not when it was skipped).
+    // When the rest runs out: a short buzz (not when it was skipped).
     LaunchedEffect(restLeft > 0) {
         if (restLeft > 0) wasResting = true
         else if (wasResting) {
             wasResting = false
+            // Vibration only: a sound would cut into the music people train with.
             view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-            runCatching {
-                val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 80)
-                tone.startTone(ToneGenerator.TONE_PROP_BEEP, 250)
-                delay(400)
-                tone.release()
-            }
         }
     }
 

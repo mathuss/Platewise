@@ -84,6 +84,8 @@ class Repo(private val context: Context) {
 
     fun workoutsOn(date: LocalDate): List<Workout> = db.workouts(date.toString())
 
+    fun workoutsBetween(from: LocalDate, to: LocalDate): List<Workout> = db.workouts(from.toString(), to.toString())
+
     fun recentWorkouts(limit: Int = 15): List<Workout> = db.recentWorkouts(limit)
 
     fun addWorkout(w: Workout) = db.insertWorkout(w)

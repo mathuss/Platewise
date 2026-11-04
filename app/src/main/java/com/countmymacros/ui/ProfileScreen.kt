@@ -1,5 +1,14 @@
 package com.countmymacros.ui
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.Color
+import com.countmymacros.ui.theme.MacroColors
+import com.countmymacros.ui.theme.macroTextColors
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -66,6 +75,7 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
     var age by remember { mutableStateOf(p.age.toString()) }
     var height by remember { mutableStateOf(fmt(p.heightCm)) }
     var weight by remember { mutableStateOf(fmt(p.weightKg)) }
+    var editing by remember { mutableStateOf<String?>(null) }
     var cKcal by remember { mutableStateOf(fmt(p.custom.kcal)) }
     var cP by remember { mutableStateOf(fmt(p.custom.protein)) }
     var cC by remember { mutableStateOf(fmt(p.custom.carbs)) }
@@ -82,24 +92,33 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        Card(
-            Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        ) {
-            Column(Modifier.padding(16.dp).fillMaxWidth()) {
+        HeroCard {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(stringResource(R.string.daily_goal), style = MaterialTheme.typography.labelLarge)
-                Text(
-                    stringResource(R.string.kcal_value, t.daily.kcal.roundToInt()),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-                MacroLine(t.daily)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Column {
+                        Text(
+                            t.daily.kcal.roundToInt().toString(),
+                            style = MaterialTheme.typography.displayMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            stringResource(R.string.kcal_per_day_goal, stringResource(p.goal.label).lowercase()),
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
+                    val (proteinText, carbsText, fatText) = macroTextColors()
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        MacroShare(stringResource(R.string.protein), t.daily.protein, t.daily.protein * 4 / t.daily.kcal, MacroColors.Protein, proteinText)
+                        MacroShare(stringResource(R.string.carbs), t.daily.carbs, t.daily.carbs * 4 / t.daily.kcal, MacroColors.Carbs, carbsText)
+                        MacroShare(stringResource(R.string.fat), t.daily.fat, t.daily.fat * 9 / t.daily.kcal, MacroColors.Fat, fatText)
+                    }
+                }
                 if (p.preset != MacroPreset.CUSTOM) {
-                    Text(
-                        stringResource(R.string.bmr_line, t.bmr.roundToInt(), t.tdee.roundToInt()),
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TagChip(stringResource(R.string.bmr_chip, t.bmr.roundToInt()))
+                        TagChip(stringResource(R.string.tdee_chip, t.tdee.roundToInt()))
+                    }
                 }
             }
         }
@@ -115,25 +134,39 @@ fun ProfileScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
         Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NumberField(age, { s ->
-                age = s
-                s.toIntOrNull()?.takeIf { it in 10..110 }?.let { vm.saveProfile(p.copy(age = it)) }
-            }, stringResource(R.string.age), Modifier.weight(1f), stringResource(R.string.years))
-            NumberField(height, { s ->
-                height = s
-                parseNum(s)?.takeIf { it in 100.0..250.0 }?.let { vm.saveProfile(p.copy(heightCm = it)) }
-            }, stringResource(R.string.height), Modifier.weight(1f), "cm")
-            NumberField(weight, { s ->
-                weight = s
-                parseNum(s)?.takeIf { it in 25.0..400.0 }?.let { vm.saveProfile(p.copy(weightKg = it)) }
-            }, stringResource(R.string.weight), Modifier.weight(1f), "kg")
+            StatTile(p.age.toString(), stringResource(R.string.age), Modifier.weight(1f), onClick = { editing = "age" })
+            StatTile(fmt(p.heightCm), stringResource(R.string.height) + " (cm)", Modifier.weight(1f), onClick = { editing = "height" })
+            StatTile(fmt(p.weightKg), stringResource(R.string.weight) + " (kg)", Modifier.weight(1f), onClick = { editing = "weight" })
+        }
+        when (editing) {
+            "age" -> EditDialog(stringResource(R.string.age), onClose = { editing = null; age = p.age.toString() }) {
+                NumberField(age, { v ->
+                    age = v
+                    v.toIntOrNull()?.takeIf { it in 10..110 }?.let { vm.saveProfile(p.copy(age = it)) }
+                }, stringResource(R.string.age), Modifier.fillMaxWidth(), stringResource(R.string.years))
+            }
+            "height" -> EditDialog(stringResource(R.string.height), onClose = { editing = null; height = fmt(p.heightCm) }) {
+                NumberField(height, { v ->
+                    height = v
+                    parseNum(v)?.takeIf { it in 100.0..250.0 }?.let { vm.saveProfile(p.copy(heightCm = it)) }
+                }, stringResource(R.string.height), Modifier.fillMaxWidth(), "cm")
+            }
+            "weight" -> EditDialog(stringResource(R.string.weight), onClose = { editing = null; weight = fmt(p.weightKg) }) {
+                NumberField(weight, { v ->
+                    weight = v
+                    parseNum(v)?.takeIf { it in 25.0..400.0 }?.let { vm.saveProfile(p.copy(weightKg = it)) }
+                }, stringResource(R.string.weight), Modifier.fillMaxWidth(), "kg")
+            }
         }
 
         SectionTitle(stringResource(R.string.activity_title))
-        Picker(
-            current = "${stringResource(p.activity.label)} — ${stringResource(p.activity.detail)}",
-            options = ActivityLevel.entries.map { "${stringResource(it.label)} — ${stringResource(it.detail)}" },
-        ) { vm.saveProfile(p.copy(activity = ActivityLevel.entries[it])) }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            ActivityLevel.entries.forEach { a ->
+                ActivityOption(a == p.activity, stringResource(a.label), stringResource(a.detail)) {
+                    vm.saveProfile(p.copy(activity = a))
+                }
+            }
+        }
         Text(
             stringResource(R.string.activity_note),
             style = MaterialTheme.typography.bodySmall,
@@ -305,4 +338,47 @@ private fun appVersionName(context: Context): String {
         pm.getPackageInfo(context.packageName, 0).versionName
     }
     return versionName ?: ""
+}
+
+/** A macro's grams with a thin bar for its share of the day's calories. */
+@Composable
+private fun MacroShare(label: String, grams: Double, share: Double, color: Color, textColor: Color) {
+    Column {
+        Row {
+            Text(label, Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = textColor, fontWeight = FontWeight.SemiBold)
+            Text(fmt(grams) + " g", style = MaterialTheme.typography.labelMedium)
+        }
+        Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = 0.18f))) {
+            Box(Modifier.fillMaxWidth(share.toFloat().coerceIn(0f, 1f)).height(6.dp).background(color))
+        }
+    }
+}
+
+@Composable
+private fun ActivityOption(selected: Boolean, title: String, detail: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+        border = if (selected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = selected, onClick = null)
+            Column(Modifier.padding(start = 12.dp)) {
+                Text(title, fontWeight = FontWeight.SemiBold)
+                Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditDialog(title: String, onClose: () -> Unit, content: @Composable () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(title) },
+        text = content,
+        confirmButton = { TextButton(onClick = onClose) { Text(stringResource(R.string.done_action)) } },
+    )
 }

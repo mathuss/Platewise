@@ -93,10 +93,14 @@ class Repo(private val context: Context) {
     fun deleteWorkout(id: Long) = db.deleteWorkout(id)
 
     /** What the user did last time for [exerciseId], to show as the reference while logging. */
-    fun previousSets(exerciseId: String): List<WorkoutSet> =
-        db.recentWorkouts(60).firstNotNullOfOrNull { w ->
-            w.exercises.firstOrNull { e -> e.exerciseId == exerciseId && e.sets.any { it.done } }?.sets
-        }.orEmpty()
+    fun previousSets(exerciseIds: List<String>): Map<String, List<WorkoutSet>> {
+        val history = db.recentWorkouts(60) // read and decoded once for all the exercises
+        return exerciseIds.associateWith { id ->
+            history.firstNotNullOfOrNull { w ->
+                w.exercises.firstOrNull { e -> e.exerciseId == id && e.sets.any { it.done } }?.sets
+            }.orEmpty()
+        }
+    }
 
     // --- weight ---
 

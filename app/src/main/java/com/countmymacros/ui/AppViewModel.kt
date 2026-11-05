@@ -38,6 +38,8 @@ import com.countmymacros.data.WorkoutExercise
 import com.countmymacros.data.WorkoutJson
 import com.countmymacros.data.WorkoutSet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -103,6 +105,8 @@ fun errorText(e: Throwable): UiText = when (e) {
     is IOException -> uiText(R.string.offline)
     else -> uiText(R.string.generic_error, e.message ?: e.javaClass.simpleName)
 }
+
+private const val PERSIST_DELAY_MS = 800L
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     val repo = Repo(app)
@@ -314,7 +318,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun loadPrevious(ids: List<String>) {
         viewModelScope.launch {
-            val found = withContext(Dispatchers.IO) { ids.associateWith { repo.previousSets(it) } }
+            val found = withContext(Dispatchers.IO) { repo.previousSets(ids) }
             previous = previous + found
         }
     }
@@ -323,6 +327,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun startWorkout(routine: Routine?, defaultName: String) {
         val exercises = routine?.exercises.orEmpty().map { e -> e.copy(sets = e.sets.map { it.copy(done = false) }) }
         session = Session(routine?.name ?: defaultName, routine?.id, live = true, startMs = System.currentTimeMillis(), exercises = exercises)
+        persistJob?.cancel()
         persistSession()
         loadPrevious(exercises.map { it.exerciseId })
         push(Screen.RunWorkout)
@@ -338,10 +343,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateSession(s: Session) {
         session = s
-        if (s.live) persistSession()
+        if (s.live) schedulePersist()
     }
 
     fun discardSession() {
+        persistJob?.cancel()
         session = null
         repo.prefs.activeWorkout = null
     }
@@ -382,6 +388,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             recentWorkouts = withContext(Dispatchers.IO) { repo.recentWorkouts() }
             reload()
         }
+    }
+
+    private var persistJob: Job? = null
+
+    /** Every keystroke edits the session; writing it out each time rewrote the whole prefs file per character. */
+    private fun schedulePersist() {
+        persistJob?.cancel()
+        persistJob = viewModelScope.launch {
+            delay(PERSIST_DELAY_MS)
+            persistSession()
+        }
+    }
+
+    /** Writes a pending edit right now: the app is being stopped and the delay may never elapse. */
+    fun flushSession() {
+        if (persistJob?.isActive != true) return
+        persistJob?.cancel()
+        persistSession()
     }
 
     private fun persistSession() {

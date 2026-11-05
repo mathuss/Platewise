@@ -64,7 +64,7 @@ fun TrainScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
     var workoutToDelete by remember { mutableStateOf<Workout?>(null) }
     var confirmDiscard by remember { mutableStateOf(false) }
 
-    val today = LocalDate.now()
+    val today = vm.today
     val monday = today.minusDays((today.dayOfWeek.value - 1).toLong())
     val trainedDates = vm.recentWorkouts.map { LocalDate.parse(it.date) }.toSet()
     val weekCount = trainedDates.count { it >= monday && it <= monday.plusDays(6) }
@@ -73,6 +73,7 @@ fun TrainScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize()) {
         LazyColumn(
             Modifier.fillMaxSize(),
+            state = vm.trainList,
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

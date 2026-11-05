@@ -73,6 +73,7 @@ fun NumCell(
     placeholder: String = "0",
     pad: Int = 0,
     emphasized: Boolean = false,
+    label: String = "",
 ) {
     var text by remember { mutableStateOf(shown(value, pad)) }
     if ((parseNum(text) ?: 0.0) != value) text = shown(value, pad)
@@ -101,7 +102,8 @@ fun NumCell(
                 inner()
             }
         },
-        modifier = modifier,
+        // Without this a screen reader announces an anonymous text field.
+        modifier = if (label.isEmpty()) modifier else modifier.semantics { contentDescription = label },
     )
 }
 
@@ -150,11 +152,14 @@ fun ExerciseCard(
     onRemove: () -> Unit,
     onMoveUp: (() -> Unit)?,
     onMoveDown: (() -> Unit)?,
+    /** Called after a set is removed with its index and content, so the caller can offer to undo it. */
+    onSetRemoved: ((index: Int, set: WorkoutSet) -> Unit)? = null,
 ) {
     val fields = exercise?.type?.fields ?: listOf(SetField.KG, SetField.REPS)
     var menu by remember { mutableStateOf(false) }
     var restDialog by remember { mutableStateOf(false) }
     val markDone = stringResource(R.string.mark_set_done)
+    val setWord = stringResource(R.string.set_label)
     val current = if (showDone) item.sets.indexOfFirst { !it.done } else -1
 
     SurfaceCard {
@@ -194,8 +199,8 @@ fun ExerciseCard(
                 Text(stringResource(R.string.set_label).uppercase(), Modifier.width(34.dp), style = header, color = muted, textAlign = TextAlign.Center, maxLines = 1)
                 if (showDone) Text(stringResource(R.string.previous).uppercase(), Modifier.weight(1f), style = header, color = muted, textAlign = TextAlign.Center, maxLines = 1)
                 fields.forEach { Text(it.label().uppercase(), Modifier.weight(1f), style = header, color = muted, textAlign = TextAlign.Center) }
-                if (showDone) Box(Modifier.width(36.dp))
-                Box(Modifier.width(28.dp))
+                if (showDone) Box(Modifier.width(44.dp))
+                Box(Modifier.width(36.dp))
             }
 
             item.sets.forEachIndexed { i, set ->
@@ -230,26 +235,40 @@ fun ExerciseCard(
                             Modifier.weight(1f),
                             placeholder = "—",
                             emphasized = set.done,
+                            label = "${f.label()} · $setWord ${i + 1}",
                         )
                     }
                     if (showDone) {
                         Box(
                             Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(11.dp))
-                                .background(if (set.done) cs.primary else cs.surfaceContainerHigh)
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(14.dp))
                                 .clickable { onChange(item.copy(sets = item.sets.replaced(i, set.copy(done = !set.done)))) }
                                 .semantics { contentDescription = markDone },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                Icons.Filled.Check, null, Modifier.size(20.dp),
-                                tint = if (set.done) cs.onPrimary else muted.copy(alpha = 0.4f),
-                            )
+                            Box(
+                                Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(11.dp))
+                                    .background(if (set.done) cs.primary else cs.surfaceContainerHigh),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    Icons.Filled.Check, null, Modifier.size(20.dp),
+                                    tint = if (set.done) cs.onPrimary else muted.copy(alpha = 0.4f),
+                                )
+                            }
                         }
                     }
-                    IconButton(onClick = { onChange(item.copy(sets = item.sets.filterIndexed { j, _ -> j != i })) }, Modifier.size(28.dp)) {
-                        Icon(Icons.Filled.Close, stringResource(R.string.remove), Modifier.size(16.dp), tint = muted)
+                    IconButton(
+                        onClick = {
+                            onChange(item.copy(sets = item.sets.filterIndexed { j, _ -> j != i }))
+                            onSetRemoved?.invoke(i, set)
+                        },
+                        Modifier.size(36.dp),
+                    ) {
+                        Icon(Icons.Filled.Close, stringResource(R.string.remove), Modifier.size(18.dp), tint = muted)
                     }
                 }
             }

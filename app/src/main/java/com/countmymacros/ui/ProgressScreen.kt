@@ -1,6 +1,7 @@
 package com.countmymacros.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -43,10 +45,14 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.countmymacros.R
 import com.countmymacros.data.Entry
+import com.countmymacros.data.ExerciseStats
+import com.countmymacros.data.Lang
 import com.countmymacros.data.Macros
+import com.countmymacros.data.Sex
 import com.countmymacros.data.Stats
 import com.countmymacros.data.fmt
 import com.countmymacros.data.parseNum
@@ -63,7 +69,7 @@ import kotlin.math.roundToInt
 @Composable
 fun ProgressScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
     var period by rememberSaveable { mutableIntStateOf(0) } // 0 = 7 days, 1 = 30 days, 2 = weight
-    val today = LocalDate.now()
+    val today = vm.today
     val span = if (period == 1) 30 else 7
     val days = (span - 1 downTo 0).map { today.minusDays(it.toLong()) }
     @Suppress("ProduceStateDoesNotAssignValue") // K2 lint false positive: `value` is assigned
@@ -89,6 +95,7 @@ fun ProgressScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
 
     LazyColumn(
         modifier.fillMaxSize(),
+        state = vm.progressList,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -167,6 +174,7 @@ fun ProgressScreen(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
         }
 
+        item { StrengthCard(vm) }
         item { WeightCard(vm, large = period == 2) }
         if (period == 2) {
             items(vm.weights.take(60), key = { it.date }) { w ->
@@ -258,6 +266,54 @@ private fun KcalChart(
                 maxLines = 1,
                 softWrap = false,
             )
+        }
+    }
+}
+
+/** The exercises done lately; tap one to see how it has progressed. */
+@Composable
+private fun StrengthCard(vm: AppViewModel) {
+    val ids = remember(vm.recentWorkouts) { ExerciseStats.recentExerciseIds(vm.recentWorkouts, 6) }
+    val female = vm.profile.sex == Sex.FEMALE
+    SurfaceCard {
+        Column(Modifier.padding(vertical = 12.dp)) {
+            Text(
+                stringResource(R.string.strength_title),
+                Modifier.padding(horizontal = 16.dp),
+                style = MaterialTheme.typography.titleMedium,
+            )
+            if (ids.isEmpty()) {
+                Text(
+                    stringResource(R.string.no_strength),
+                    Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Text(
+                    stringResource(R.string.strength_hint),
+                    Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                ids.forEach { id ->
+                    val e = vm.exercise(id)
+                    Row(
+                        Modifier.fillMaxWidth().clickable { vm.push(Screen.ExerciseProgress(id)) }
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ExerciseThumb(e, female, size = 40.dp)
+                        Text(
+                            e?.name(Lang.current) ?: id,
+                            Modifier.weight(1f).padding(horizontal = 12.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
         }
     }
 }

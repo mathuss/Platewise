@@ -66,6 +66,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.countmymacros.R
 import com.countmymacros.data.Burn
 import com.countmymacros.data.Lang
+import com.countmymacros.data.Sessions
 import com.countmymacros.data.Sex
 import com.countmymacros.data.Workout
 import com.countmymacros.data.fmt
@@ -133,6 +134,7 @@ fun WorkoutScreen(vm: AppViewModel) {
     var restFor by remember { mutableStateOf("") }
     var confirmDiscard by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
+    var staleFinish by remember { mutableStateOf(false) }
 
     Scaffold(
         modifier = Modifier.pointerInput(Unit) {
@@ -164,7 +166,11 @@ fun WorkoutScreen(vm: AppViewModel) {
                 },
                 actions = {
                     Button(
-                        onClick = vm::finishSession,
+                        onClick = {
+                            // A workout left open for hours would be saved with all of them: ask how long it really lasted.
+                            if (s.live && Sessions.isStale(s.startMs, System.currentTimeMillis())) staleFinish = true
+                            else vm.finishSession()
+                        },
                         enabled = s.live || s.durationMin > 0,
                         modifier = Modifier.padding(end = 12.dp),
                     ) { Text(stringResource(R.string.finish)) }
@@ -209,7 +215,13 @@ fun WorkoutScreen(vm: AppViewModel) {
                         val restEnd = if (s.live && ticked) System.currentTimeMillis() + changed.restSeconds * 1000L else s.restEndMs
                         vm.updateSession(s.copy(exercises = s.exercises.replaced(i, changed), restEndMs = restEnd))
                     },
-                    onRemove = { vm.updateSession(s.copy(exercises = s.exercises.filterIndexed { j, _ -> j != i })) },
+                    onRemove = {
+                        vm.updateSession(s.copy(exercises = s.exercises.filterIndexed { j, _ -> j != i }))
+                        vm.undo = Undo(uiText(R.string.toast_exercise_removed)) { vm.reinsertExercise(i, item) }
+                    },
+                    onSetRemoved = { setIndex, set ->
+                        vm.undo = Undo(uiText(R.string.toast_set_removed)) { vm.reinsertSet(i, setIndex, set) }
+                    },
                     onMoveUp = if (i > 0) ({ vm.updateSession(s.copy(exercises = s.exercises.moved(i, i - 1))) }) else null,
                     onMoveDown = if (i < s.exercises.lastIndex) ({ vm.updateSession(s.copy(exercises = s.exercises.moved(i, i + 1))) }) else null,
                 )
@@ -230,6 +242,13 @@ fun WorkoutScreen(vm: AppViewModel) {
         }
     }
 
+    if (staleFinish) {
+        StaleFinishDialog(
+            hours = ((System.currentTimeMillis() - s.startMs) / 3_600_000L).toInt(),
+            onFinish = { minutes -> staleFinish = false; vm.finishSession(minutes) },
+            onDismiss = { staleFinish = false },
+        )
+    }
     if (confirmDiscard) {
         ConfirmDialog(
             title = stringResource(R.string.discard),
@@ -377,6 +396,29 @@ private fun RestBar(s: Session, now: LongState, restTotal: Long, restFor: String
             ) { Text(stringResource(R.string.skip)) }
         }
     }
+}
+
+/** Shown when finishing a workout that has been open for hours: the clock kept running, the training didn't. */
+@Composable
+private fun StaleFinishDialog(hours: Int, onFinish: (minutes: Int) -> Unit, onDismiss: () -> Unit) {
+    var text by remember { mutableStateOf(Sessions.FORGOTTEN_DEFAULT_MIN.toString()) }
+    val minutes = text.toIntOrNull() ?: 0
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.stale_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.stale_body, hours))
+                NumberField(text, { text = it }, stringResource(R.string.workout_duration), Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onFinish(minutes) }, enabled = minutes in 1..(24 * 60)) {
+                Text(stringResource(R.string.finish))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
+    )
 }
 
 /** Date, start time and duration of a workout that already happened. */

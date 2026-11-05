@@ -22,14 +22,19 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,7 +56,9 @@ import com.countmymacros.ui.theme.MacroColors
 import com.countmymacros.ui.theme.macroTextColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.math.roundToInt
 
 @Composable
@@ -76,10 +83,11 @@ fun DiaryScreen(
 
     LazyColumn(
         modifier.fillMaxSize(),
+        state = vm.diaryList,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { DateBar(vm.date, vm::setDay) }
+        item { DateBar(vm.date, vm.today, vm::setDay) }
         item { DayStrip(vm.date, vm::setDay, marked = logged) }
         if (!vm.profileSet) {
             item {
@@ -118,14 +126,17 @@ fun DiaryScreen(
     }
 }
 
+/** Previous / next day, tap the date to pick any day, and a shortcut back to today when elsewhere. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DateBar(date: LocalDate, onDate: (LocalDate) -> Unit) {
+private fun DateBar(date: LocalDate, today: LocalDate, onDate: (LocalDate) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = { onDate(date.minusDays(1)) }, modifier = Modifier.size(44.dp)) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.prev_day))
         }
         Column(
-            Modifier.weight(1f).clickable(onClick = { onDate(LocalDate.now()) }),
+            Modifier.weight(1f).clickable { picking = true },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(dayLabel(date), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -137,9 +148,28 @@ private fun DateBar(date: LocalDate, onDate: (LocalDate) -> Unit) {
                 )
             }
         }
+        if (date != today) TextButton(onClick = { onDate(today) }) { Text(stringResource(R.string.today)) }
         IconButton(onClick = { onDate(date.plusDays(1)) }, modifier = Modifier.size(44.dp)) {
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.next_day))
         }
+    }
+    if (picking) {
+        // The picker works in UTC midnights; convert from / to the local date.
+        val state = rememberDatePickerState(
+            initialSelectedDateMillis = date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+        )
+        DatePickerDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    state.selectedDateMillis?.let { ms ->
+                        onDate(Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate())
+                    }
+                    picking = false
+                }) { Text(stringResource(R.string.save)) }
+            },
+            dismissButton = { TextButton(onClick = { picking = false }) { Text(stringResource(R.string.cancel)) } },
+        ) { DatePicker(state) }
     }
 }
 
@@ -204,12 +234,14 @@ private fun MealCard(
         Column(Modifier.padding(start = 14.dp, end = 6.dp, top = 8.dp, bottom = 4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconBadge(mealIcon(meal), size = 34.dp)
-                Text(
-                    mealName,
-                    Modifier.weight(1f).padding(horizontal = 10.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                    Text(
+                        mealName,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (entries.isNotEmpty()) MacroLine(sum, whole = true)
+                }
                 if (entries.isNotEmpty()) {
                     Text(
                         stringResource(R.string.kcal_value, sum.kcal.roundToInt()),
@@ -267,6 +299,7 @@ private fun EntryRow(e: Entry, onClick: () -> Unit) {
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            MacroLine(e.macros, whole = true)
         }
         Text("${e.macros.kcal.roundToInt()}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
     }

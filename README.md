@@ -103,7 +103,7 @@ app/src/test/              tests (cálculos, búsqueda, Describir, lectura de et
 ## Estado
 
 **Identidad:** paleta Oliva (`#5B7A1A` principal) en toda la app, en claro y oscuro; ícono del
-launcher con el logo B tonal (tenedor, plato en tres porciones y cuchillo), fondo `#E4EBC8` y
+launcher con el logo A tonal (tenedor, plato en tres porciones y cuchillo, con cubiertos a escala real, ~0,7 del plato), fondo `#E4EBC8` y
 figura `#3D5010`, con capa monocroma para los íconos temáticos de Android 13+.
 
 Compila (debug y release minificado), pasan los 9 tests y lint queda sin advertencias. Se

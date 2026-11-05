@@ -31,9 +31,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -52,7 +50,6 @@ import com.countmymacros.data.Routine
 import com.countmymacros.data.Suggestions
 import com.countmymacros.data.Workout
 import com.countmymacros.data.fmt
-import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
@@ -190,13 +187,7 @@ private fun musclesOf(vm: AppViewModel, r: Routine): List<String> {
 
 @Composable
 private fun LiveHero(live: Session, onResume: () -> Unit, onDiscard: () -> Unit) {
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            now = System.currentTimeMillis()
-            delay(1000)
-        }
-    }
+    val now by rememberNowMs()
     HeroCard {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.workout_in_progress).uppercase(), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)

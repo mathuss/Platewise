@@ -44,6 +44,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.LongState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -52,10 +53,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import com.countmymacros.R
 import com.countmymacros.data.Burn
 import com.countmymacros.data.Lang
@@ -92,44 +99,51 @@ fun WorkoutScreen(vm: AppViewModel) {
     }
     val view = LocalView.current
     val female = vm.profile.sex == Sex.FEMALE
-    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    if (s.live) {
-        LaunchedEffect(Unit) {
-            while (true) {
-                now = System.currentTimeMillis()
-                delay(1000)
+    // Not read here: only the small composables that show the time read it, so the clock doesn't recompose the exercise cards.
+    val now = rememberNowMs(active = s.live)
+
+    // The screen stays on while you train, so you don't unlock the phone between sets,
+    // but not forever: a phone left open on the bench would burn its battery on a lit screen.
+    var awake by remember { mutableStateOf(true) }
+    val lastTouch = remember { longArrayOf(System.currentTimeMillis()) }
+    fun touch() {
+        lastTouch[0] = System.currentTimeMillis()
+        awake = true
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { touch() }
+    LaunchedEffect(s.live, awake) {
+        if (!s.live || !awake) return@LaunchedEffect
+        while (true) {
+            val left = KEEP_AWAKE_MS - (System.currentTimeMillis() - lastTouch[0])
+            if (left <= 0) {
+                awake = false
+                return@LaunchedEffect
             }
+            delay(left)
         }
     }
-    // The screen stays on while you train, so you don't unlock the phone between sets.
-    DisposableEffect(s.live) {
-        if (s.live) view.keepScreenOn = true
+    DisposableEffect(s.live && awake) {
+        if (s.live && awake) view.keepScreenOn = true
         onDispose { view.keepScreenOn = false }
     }
 
-    val endMs = if (s.live) now else s.startMs + s.durationMin * 60_000L
-    val seconds = ((endMs - s.startMs) / 1000).coerceAtLeast(0)
-    val kcal = Burn.kcal(seconds, vm.profile.weightKg)
     val setsDone = s.exercises.sumOf { e -> e.sets.count { it.done } }
     val setsTotal = s.exercises.sumOf { it.sets.size }
-    val restLeft = if (s.live) ((s.restEndMs - now + 999) / 1000).coerceAtLeast(0) else 0L
     var restTotal by remember { mutableLongStateOf(90L) }
     var restFor by remember { mutableStateOf("") }
-    var wasResting by remember { mutableStateOf(false) }
     var confirmDiscard by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
 
-    // When the rest runs out: a short buzz (not when it was skipped).
-    LaunchedEffect(restLeft > 0) {
-        if (restLeft > 0) wasResting = true
-        else if (wasResting) {
-            wasResting = false
-            // Vibration only: a sound would cut into the music people train with.
-            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-        }
-    }
-
     Scaffold(
+        modifier = Modifier.pointerInput(Unit) {
+            // Watches every touch without consuming it.
+            awaitPointerEventScope {
+                while (true) {
+                    awaitPointerEvent(PointerEventPass.Initial)
+                    touch()
+                }
+            }
+        },
         topBar = {
             TopAppBar(
                 title = {
@@ -158,53 +172,14 @@ fun WorkoutScreen(vm: AppViewModel) {
             )
         },
         bottomBar = {
-            if (restLeft > 0) {
-                Surface(
-                    shape = RoundedCornerShape(26.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    tonalElevation = 6.dp,
-                    shadowElevation = 8.dp,
-                    modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
-                ) {
-                    Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(
-                                progress = { (restLeft.toFloat() / restTotal.coerceAtLeast(1)).coerceIn(0f, 1f) },
-                                modifier = Modifier.fillMaxSize(),
-                                strokeWidth = 4.dp,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                            )
-                            Text(clock(restLeft), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                        }
-                        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                            Text(stringResource(R.string.rest_title), fontWeight = FontWeight.SemiBold)
-                            if (restFor.isNotBlank()) {
-                                Text(
-                                    restFor,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                )
-                            }
-                        }
-                        FilledTonalButton(
-                            onClick = {
-                                restTotal += 15
-                                vm.updateSession(s.copy(restEndMs = s.restEndMs + 15_000))
-                            },
-                            contentPadding = PaddingValues(horizontal = 12.dp),
-                        ) { Text(stringResource(R.string.rest_plus)) }
-                        Button(
-                            onClick = {
-                                wasResting = false
-                                vm.updateSession(s.copy(restEndMs = 0))
-                            },
-                            Modifier.padding(start = 6.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp),
-                        ) { Text(stringResource(R.string.skip)) }
-                    }
-                }
-            }
+            RestBar(
+                s, now, restTotal, restFor,
+                onExtend = {
+                    restTotal += 15
+                    vm.updateSession(s.copy(restEndMs = s.restEndMs + 15_000))
+                },
+                onSkip = { vm.updateSession(s.copy(restEndMs = 0)) },
+            )
         },
     ) { inner ->
         LazyColumn(
@@ -215,37 +190,7 @@ fun WorkoutScreen(vm: AppViewModel) {
             if (!s.live) {
                 item { LoggedTimeFields(s, vm::updateSession) }
             }
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Column(Modifier.weight(1f)) {
-                            Text(stringResource(R.string.time_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                if (s.live) clock(seconds) else "${seconds / 60} min",
-                                style = MaterialTheme.typography.displayMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                        Text(
-                            stringResource(R.string.set_progress, setsDone, setsTotal),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    LinearProgressIndicator(
-                        progress = { if (setsTotal == 0) 0f else setsDone.toFloat() / setsTotal },
-                        modifier = Modifier.fillMaxWidth().height(6.dp),
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        strokeCap = StrokeCap.Round,
-                        drawStopIndicator = {},
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        StatTile(fmt(Workout.volumeKg(s.exercises)), stringResource(R.string.volume_kg), Modifier.weight(1f))
-                        StatTile("$setsDone", stringResource(R.string.series_label), Modifier.weight(1f))
-                        StatTile("${kcal.roundToInt()}", stringResource(R.string.kcal_label), Modifier.weight(1f))
-                    }
-                }
-            }
+            item { WorkoutStats(s, now, vm.profile.weightKg, setsDone, setsTotal) }
             itemsIndexed(s.exercises) { i, item ->
                 val exercise = vm.exercise(item.exerciseId)
                 ExerciseCard(
@@ -308,6 +253,129 @@ fun WorkoutScreen(vm: AppViewModel) {
             },
             confirmButton = { TextButton(onClick = { renaming = false }) { Text(stringResource(R.string.done_action)) } },
         )
+    }
+}
+
+/** Without a touch for this long the screen is allowed to time out again. */
+private const val KEEP_AWAKE_MS = 10 * 60_000L
+
+/**
+ * The wall clock, refreshed once a second only while the screen is visible (STARTED), so a workout left
+ * in the background doesn't keep a timer running. Read it in the smallest composable that shows the time.
+ */
+@Composable
+internal fun rememberNowMs(active: Boolean = true): LongState {
+    val now = remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    if (active) {
+        LaunchedEffect(lifecycle) {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    now.longValue = System.currentTimeMillis()
+                    delay(1000)
+                }
+            }
+        }
+    }
+    return now
+}
+
+/** Elapsed time, progress and the three stat tiles: the only part of the page that changes every second. */
+@Composable
+private fun WorkoutStats(s: Session, now: LongState, weightKg: Double, setsDone: Int, setsTotal: Int) {
+    val endMs = if (s.live) now.longValue else s.startMs + s.durationMin * 60_000L
+    val seconds = ((endMs - s.startMs) / 1000).coerceAtLeast(0)
+    val kcal = Burn.kcal(seconds, weightKg)
+    val volume = remember(s.exercises) { Workout.volumeKg(s.exercises) }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.time_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    if (s.live) clock(seconds) else "${seconds / 60} min",
+                    style = MaterialTheme.typography.displayMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Text(
+                stringResource(R.string.set_progress, setsDone, setsTotal),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        LinearProgressIndicator(
+            progress = { if (setsTotal == 0) 0f else setsDone.toFloat() / setsTotal },
+            modifier = Modifier.fillMaxWidth().height(6.dp),
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            strokeCap = StrokeCap.Round,
+            drawStopIndicator = {},
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StatTile(fmt(volume), stringResource(R.string.volume_kg), Modifier.weight(1f))
+            StatTile("$setsDone", stringResource(R.string.series_label), Modifier.weight(1f))
+            StatTile("${kcal.roundToInt()}", stringResource(R.string.kcal_label), Modifier.weight(1f))
+        }
+    }
+}
+
+/** The rest countdown pinned to the bottom. Always composed (empty when not resting) so it can buzz when the rest ends. */
+@Composable
+private fun RestBar(s: Session, now: LongState, restTotal: Long, restFor: String, onExtend: () -> Unit, onSkip: () -> Unit) {
+    val view = LocalView.current
+    val restLeft = if (s.live) ((s.restEndMs - now.longValue + 999) / 1000).coerceAtLeast(0) else 0L
+    var wasResting by remember { mutableStateOf(false) }
+
+    // When the rest runs out: a short buzz (not when it was skipped).
+    LaunchedEffect(restLeft > 0) {
+        if (restLeft > 0) wasResting = true
+        else if (wasResting) {
+            wasResting = false
+            // Vibration only: a sound would cut into the music people train with.
+            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+        }
+    }
+    if (restLeft <= 0) return
+
+    Surface(
+        shape = RoundedCornerShape(26.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 6.dp,
+        shadowElevation = 8.dp,
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(
+                    progress = { (restLeft.toFloat() / restTotal.coerceAtLeast(1)).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxSize(),
+                    strokeWidth = 4.dp,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+                Text(clock(restLeft), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            }
+            Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                Text(stringResource(R.string.rest_title), fontWeight = FontWeight.SemiBold)
+                if (restFor.isNotBlank()) {
+                    Text(
+                        restFor,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                }
+            }
+            FilledTonalButton(onClick = onExtend, contentPadding = PaddingValues(horizontal = 12.dp)) {
+                Text(stringResource(R.string.rest_plus))
+            }
+            Button(
+                onClick = {
+                    wasResting = false
+                    onSkip()
+                },
+                Modifier.padding(start = 6.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp),
+            ) { Text(stringResource(R.string.skip)) }
+        }
     }
 }
 

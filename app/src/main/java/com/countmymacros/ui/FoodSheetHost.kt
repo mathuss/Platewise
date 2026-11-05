@@ -295,7 +295,7 @@ private fun StepButton(icon: ImageVector, description: String, filled: Boolean, 
 
 /** The share of calories from protein, carbs and fat (4 / 4 / 9 kcal per gram) as a ring, with the total inside. */
 @Composable
-private fun MacroDonut(m: Macros, modifier: Modifier = Modifier) {
+internal fun MacroDonut(m: Macros, modifier: Modifier = Modifier) {
     val track = MaterialTheme.colorScheme.surfaceVariant
     val parts = listOf(m.protein * 4 to MacroColors.Protein, m.carbs * 4 to MacroColors.Carbs, m.fat * 9 to MacroColors.Fat)
     val sum = parts.sumOf { it.first }

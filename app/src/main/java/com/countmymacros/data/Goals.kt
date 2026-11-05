@@ -16,10 +16,10 @@ enum class Activity(@StringRes val label: Int, @StringRes val detail: Int, val f
 }
 
 /** Fitia models the goal as a signed calorie-deficit percentage on top of TDEE. */
-enum class GoalType(@StringRes val label: Int) {
-    LOSE(R.string.goal_lose),
-    MAINTAIN(R.string.goal_maintain),
-    GAIN(R.string.goal_gain),
+enum class GoalType(@StringRes val label: Int, @StringRes val shortLabel: Int) {
+    LOSE(R.string.goal_lose, R.string.goal_lose_short),
+    MAINTAIN(R.string.goal_maintain, R.string.goal_maintain),
+    GAIN(R.string.goal_gain, R.string.goal_gain_short),
 }
 
 /** Share of calories from protein / carbs / fat. Names follow Fitia's macrosDistributionType values. */

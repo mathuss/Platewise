@@ -17,10 +17,14 @@ suspend fun readLabelLines(jpeg: ByteArray): List<OcrLine> {
     val bitmap = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size) ?: return emptyList()
     val image = InputImage.fromBitmap(bitmap, 0)
     val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-    val text = suspendCancellableCoroutine { cont ->
-        recognizer.process(image)
-            .addOnSuccessListener { cont.resume(it) }
-            .addOnFailureListener { cont.resumeWithException(it) }
+    val text = try {
+        suspendCancellableCoroutine { cont ->
+            recognizer.process(image)
+                .addOnSuccessListener { cont.resume(it) }
+                .addOnFailureListener { cont.resumeWithException(it) }
+        }
+    } finally {
+        recognizer.close() // a new client per scan: leaving it open keeps the native recognizer alive
     }
     return text.textBlocks.flatMap { block ->
         block.lines.map { line ->

@@ -84,6 +84,9 @@ data class Exercise(
 ) {
     fun name(lang: String) = if (lang == "es") es else en
     val isCustom get() = id.startsWith("custom:")
+
+    /** Both names normalized once per instance: the picker filters the whole catalog on every keystroke. */
+    internal val searchText: String by lazy { FoodSearch.normalize("$es $en") }
 }
 
 object ExerciseCatalog {
@@ -114,7 +117,7 @@ object ExerciseCatalog {
         val words = FoodSearch.normalize(query).split(' ').filter { it.isNotBlank() }
         return exercises.filter { e ->
             (muscle == null || e.muscle == muscle) && (equipment == null || e.equipment == equipment) &&
-                FoodSearch.normalize("${e.es} ${e.en}").let { hay -> words.all { hay.contains(it) } }
+                words.all { e.searchText.contains(it) }
         }
     }
 }

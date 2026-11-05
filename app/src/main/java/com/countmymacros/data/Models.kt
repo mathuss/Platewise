@@ -64,6 +64,10 @@ data class Food(
     /** The serving a new entry starts with: the food's first named serving, else 100 g. */
     val defaultServing: Pair<Serving, Double>
         get() = servings.firstOrNull()?.let { it to 1.0 } ?: (GRAMS to 100.0)
+
+    /** Normalized once per instance: searching normalizes the whole catalog on every keystroke otherwise. */
+    internal val searchName: String by lazy { FoodSearch.normalize(name) }
+    internal val searchText: String by lazy { "$searchName ${FoodSearch.normalize(brand)} ${FoodSearch.normalize(aliases)}" }
 }
 
 /**

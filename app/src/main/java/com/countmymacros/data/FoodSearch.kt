@@ -13,9 +13,8 @@ object FoodSearch {
         val words = normalize(query).split(' ', ',').filter { it.isNotBlank() }
         if (words.isEmpty()) return emptyList()
         return foods.mapNotNull { f ->
-            val name = normalize(f.name)
-            val hay = "$name ${normalize(f.brand)} ${normalize(f.aliases)}"
-            if (!words.all { hay.contains(it) }) return@mapNotNull null
+            val name = f.searchName
+            if (!words.all { f.searchText.contains(it) }) return@mapNotNull null
             val first = words.first()
             val score = when {
                 name.startsWith(first) -> 0

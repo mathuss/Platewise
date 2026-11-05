@@ -86,9 +86,12 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+
+private const val SEARCH_DEBOUNCE_MS = 200L
 
 private sealed interface Online {
     data object Idle : Online
@@ -122,7 +125,11 @@ fun AddFoodScreen(vm: AppViewModel, initialMeal: Meal) {
     }
     @Suppress("ProduceStateDoesNotAssignValue")
     val local by produceState(emptyList<Food>(), query, myFoods) {
-        value = if (query.isBlank()) emptyList() else withContext(Dispatchers.IO) { vm.repo.searchLocal(query, Lang.current) }
+        // A new query cancels this block, so the delay is a debounce: only a pause in typing searches.
+        value = if (query.isBlank()) emptyList() else {
+            delay(SEARCH_DEBOUNCE_MS)
+            withContext(Dispatchers.IO) { vm.repo.searchLocal(query, Lang.current) }
+        }
     }
 
     fun searchOnline() {

@@ -1,6 +1,11 @@
 package com.countmymacros.ui
 
 import android.app.Application
+import android.content.ContentResolver
+import android.net.Uri
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -9,7 +14,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.countmymacros.R
+import com.countmymacros.data.BackupException
 import com.countmymacros.data.Burn
+import com.countmymacros.data.Days
 import com.countmymacros.data.Entry
 import com.countmymacros.data.Equipment
 import com.countmymacros.data.Exercise
@@ -30,6 +37,7 @@ import com.countmymacros.data.Records
 import com.countmymacros.data.Repo
 import com.countmymacros.data.Routine
 import com.countmymacros.data.Serving
+import com.countmymacros.data.Sessions
 import com.countmymacros.data.SetRecord
 import com.countmymacros.data.Targets
 import com.countmymacros.data.Weight
@@ -58,6 +66,7 @@ sealed interface Screen {
     data object PickExercises : Screen
     data object RunWorkout : Screen
     data class WorkoutSummary(val workout: Workout, val records: List<SetRecord>) : Screen
+    data class ExerciseProgress(val exerciseId: String) : Screen
 }
 
 /** Where the exercise picker puts what the user selects. */
@@ -108,11 +117,16 @@ fun errorText(e: Throwable): UiText = when (e) {
 
 private const val PERSIST_DELAY_MS = 800L
 
+/** A message with an "Undo" button: [restore] puts back what was just deleted. */
+class Undo(val message: UiText, val restore: () -> Unit)
+
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     val repo = Repo(app)
 
     // --- diary ---
-    var date by mutableStateOf(LocalDate.now()); private set
+    /** The calendar's today, as of the last time the app came to the foreground. */
+    var today by mutableStateOf(LocalDate.now()); private set
+    var date by mutableStateOf(today); private set
     var entries by mutableStateOf<List<Entry>>(emptyList()); private set
     var profile by mutableStateOf(repo.prefs.profile); private set
     var profileSet by mutableStateOf(repo.prefs.profileSet); private set
@@ -140,6 +154,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var sheet by mutableStateOf<FoodSheet?>(null)
     var toast by mutableStateOf<UiText?>(null)
 
+    /** Set after a delete: the snackbar offers to take it back. */
+    var undo by mutableStateOf<Undo?>(null)
+
+    // Scroll positions live here so they survive leaving a tab or opening a pushed page
+    // (the tabs leave the composition while a page is open).
+    val diaryList = LazyListState()
+    val trainList = LazyListState()
+    val progressList = LazyListState()
+    val profileScroll = ScrollState(0)
+
     init {
         reload()
         loadTraining()
@@ -157,6 +181,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setDay(d: LocalDate) {
         date = d
         reload()
+    }
+
+    /** Called when the app comes to the foreground: after midnight, a diary left on "today" moves to the new today. */
+    fun refreshToday() {
+        val now = LocalDate.now()
+        if (now == today) return
+        val shown = Days.follow(date, today, now)
+        today = now
+        if (shown != date) setDay(shown)
     }
 
     fun push(s: Screen) {
@@ -218,7 +251,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun updateEntry(e: Entry) = io { repo.update(e) }
 
-    fun deleteEntry(e: Entry) = io { repo.delete(e.id) }
+    fun deleteEntry(e: Entry) {
+        io { repo.delete(e.id) }
+        undo = Undo(uiText(R.string.toast_entry_deleted, e.name)) { io { repo.add(e.copy(id = 0)) } }
+    }
 
     /** Fitia's QuickItemModel: one 100 g "serving" carries exactly these totals. */
     fun quickAdd(meal: Meal, name: String, macros: Macros) {
@@ -249,7 +285,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // --- training ---
 
-    fun exercise(id: String): Exercise? = exercises.firstOrNull { it.id == id }
+    private val exercisesById by derivedStateOf { exercises.associateBy { it.id } }
+
+    fun exercise(id: String): Exercise? = exercisesById[id]
 
     private fun loadTraining() {
         viewModelScope.launch {
@@ -346,17 +384,38 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (s.live) schedulePersist()
     }
 
+    /** Puts a removed set back where it was (undo). */
+    fun reinsertSet(exerciseIndex: Int, setIndex: Int, set: WorkoutSet) {
+        val s = session ?: return
+        val e = s.exercises.getOrNull(exerciseIndex) ?: return
+        val sets = e.sets.toMutableList().apply { add(setIndex.coerceIn(0, size), set) }
+        updateSession(s.copy(exercises = s.exercises.replaced(exerciseIndex, e.copy(sets = sets))))
+    }
+
+    /** Puts a removed exercise back where it was (undo). */
+    fun reinsertExercise(index: Int, item: WorkoutExercise) {
+        val s = session ?: return
+        updateSession(s.copy(exercises = s.exercises.toMutableList().apply { add(index.coerceIn(0, size), item) }))
+    }
+
     fun discardSession() {
         persistJob?.cancel()
         session = null
         repo.prefs.activeWorkout = null
     }
 
-    /** Saves the workout. Returns false (and says why) when there is nothing completed to save. */
-    fun finishSession() {
+    /**
+     * Saves the workout, or says why not when nothing was completed. A live workout ends now unless
+     * [durationMin] says how long it really lasted (for one that was forgotten open).
+     */
+    fun finishSession(durationMin: Int? = null) {
         val s = session ?: return
         val now = System.currentTimeMillis()
-        val endMs = if (s.live) now else s.startMs + s.durationMin * 60_000L
+        val endMs = when {
+            !s.live -> s.startMs + s.durationMin * 60_000L
+            durationMin != null -> s.startMs + durationMin * 60_000L
+            else -> now
+        }
         val done = s.exercises
             .map { e -> e.copy(sets = e.sets.filter { it.done }) }
             .filter { it.sets.isNotEmpty() }
@@ -562,6 +621,56 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun deleteWeight(w: Weight) = viewModelScope.launch {
         withContext(Dispatchers.IO) { repo.deleteWeight(w.date) }
+        loadWeights()
+        undo = Undo(uiText(R.string.toast_weight_deleted)) {
+            viewModelScope.launch {
+                withContext(Dispatchers.IO) { repo.putWeight(w) }
+                loadWeights()
+            }
+        }
+    }
+
+    // --- export / import ---
+
+    fun exportTo(resolver: ContentResolver, uri: Uri) {
+        viewModelScope.launch {
+            toast = try {
+                withContext(Dispatchers.IO) {
+                    val json = repo.exportJson()
+                    val out = resolver.openOutputStream(uri, "wt") ?: throw IOException("no output stream")
+                    out.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+                }
+                uiText(R.string.toast_exported)
+            } catch (e: Exception) {
+                uiText(R.string.toast_export_failed)
+            }
+        }
+    }
+
+    /** Replaces all data with the backup file at [uri]. A bad file changes nothing. */
+    fun importFrom(resolver: ContentResolver, uri: Uri) {
+        viewModelScope.launch {
+            toast = try {
+                withContext(Dispatchers.IO) {
+                    val input = resolver.openInputStream(uri) ?: throw IOException("no input stream")
+                    repo.importJson(input.use { it.readBytes().toString(Charsets.UTF_8) })
+                }
+                reloadAll()
+                uiText(R.string.toast_imported)
+            } catch (e: BackupException) {
+                uiText(R.string.toast_import_invalid)
+            } catch (e: Exception) {
+                uiText(R.string.toast_import_failed)
+            }
+        }
+    }
+
+    private fun reloadAll() {
+        profile = repo.prefs.profile
+        profileSet = repo.prefs.profileSet
+        foodsVersion++
+        reload()
+        loadTraining()
         loadWeights()
     }
 

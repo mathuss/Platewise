@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12+. The diary and settings are backed up / transferred; secrets.xml (where older versions kept an API key) is not. -->
+<!-- Everything (database and settings) goes to cloud backup and device transfer. -->
 <data-extraction-rules>
-    <cloud-backup>
-        <exclude domain="sharedpref" path="secrets.xml" />
-    </cloud-backup>
-    <device-transfer>
-        <exclude domain="sharedpref" path="secrets.xml" />
-    </device-transfer>
+    <cloud-backup />
+    <device-transfer />
 </data-extraction-rules>

@@ -22,7 +22,9 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,6 +46,7 @@ import com.countmymacros.ui.CreateFoodScreen
 import com.countmymacros.ui.DescribeScreen
 import com.countmymacros.ui.DiaryScreen
 import com.countmymacros.ui.ExercisePickerScreen
+import com.countmymacros.ui.ExerciseProgressScreen
 import com.countmymacros.ui.FoodSheetHost
 import com.countmymacros.ui.ProfileScreen
 import com.countmymacros.ui.ProgressScreen
@@ -72,6 +75,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        vm.refreshToday() // the app may have been open since yesterday
+    }
+
     override fun onStop() {
         vm.flushSession()
         super.onStop()
@@ -98,6 +106,18 @@ private fun App(vm: AppViewModel) {
         vm.toast = null
     }
 
+    // After a delete: the snackbar carries an Undo button.
+    LaunchedEffect(vm.undo) {
+        val u = vm.undo ?: return@LaunchedEffect
+        val result = snackbar.showSnackbar(
+            u.message.resolve(context),
+            actionLabel = context.getString(R.string.undo),
+            duration = SnackbarDuration.Long,
+        )
+        if (result == SnackbarResult.ActionPerformed) u.restore()
+        if (vm.undo === u) vm.undo = null
+    }
+
     // Back closes pushed pages first, then returns to the diary, then exits.
     BackHandler(enabled = vm.stack.isNotEmpty()) { vm.pop() }
     BackHandler(enabled = vm.stack.isEmpty() && tab != 0) { tab = 0 }
@@ -110,6 +130,7 @@ private fun App(vm: AppViewModel) {
         Screen.PickExercises -> ExercisePickerScreen(vm)
         Screen.RunWorkout -> WorkoutScreen(vm)
         is Screen.WorkoutSummary -> WorkoutSummaryScreen(vm, top.workout, top.records)
+        is Screen.ExerciseProgress -> ExerciseProgressScreen(vm, top.exerciseId)
         null -> Scaffold(
             snackbarHost = { SnackbarHost(snackbar) },
             bottomBar = {

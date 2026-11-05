@@ -6,6 +6,9 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import org.json.JSONArray
+import org.json.JSONObject
+
+private val BACKUP_TABLES = listOf("entries", "foods", "weights", "routines", "workouts", "custom_exercises")
 
 /**
  * Everything the user records lives here, on the device. Mirrors the parts of Fitia's Room
@@ -13,7 +16,7 @@ import org.json.JSONArray
  * user's own foods (custom + scanned), and weight (WeightModel). Version 2 adds training:
  * routines, finished workouts and the user's own exercises.
  */
-class Db(context: Context) : SQLiteOpenHelper(context, "macros.db", null, 2) {
+class Db(context: Context) : SQLiteOpenHelper(context, "macros.db", null, 3) {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -32,6 +35,7 @@ class Db(context: Context) : SQLiteOpenHelper(context, "macros.db", null, 2) {
                 created_at INTEGER NOT NULL)"""
         )
         db.execSQL("CREATE INDEX entries_date ON entries(date)")
+        createFoodKeyIndex(db)
         db.execSQL(
             """CREATE TABLE foods (
                 key TEXT PRIMARY KEY,
@@ -50,6 +54,12 @@ class Db(context: Context) : SQLiteOpenHelper(context, "macros.db", null, 2) {
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
         if (oldVersion < 2) createTrainingTables(db)
+        if (oldVersion < 3) createFoodKeyIndex(db)
+    }
+
+    /** "Recent foods" groups the whole diary by food_key; the index keeps that from scanning the table. */
+    private fun createFoodKeyIndex(db: SQLiteDatabase) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS entries_food_key ON entries(food_key)")
     }
 
     private fun createTrainingTables(db: SQLiteDatabase) {
@@ -298,6 +308,62 @@ class Db(context: Context) : SQLiteOpenHelper(context, "macros.db", null, 2) {
             put("equipment", equipment.id)
         }
         return writableDatabase.insert("custom_exercises", null, v)
+    }
+
+    // --- backup ---
+
+    /** Every row of every table as JSON, column names as keys. Schema-agnostic on purpose. */
+    fun dumpAll(): JSONObject {
+        val out = JSONObject()
+        for (table in BACKUP_TABLES) {
+            val rows = JSONArray()
+            readableDatabase.query(table, null, null, null, null, null, null).use { c ->
+                while (c.moveToNext()) {
+                    val row = JSONObject()
+                    for (i in 0 until c.columnCount) {
+                        val name = c.getColumnName(i)
+                        when (c.getType(i)) {
+                            Cursor.FIELD_TYPE_NULL -> row.put(name, JSONObject.NULL)
+                            Cursor.FIELD_TYPE_INTEGER -> row.put(name, c.getLong(i))
+                            Cursor.FIELD_TYPE_FLOAT -> row.put(name, c.getDouble(i))
+                            else -> row.put(name, c.getString(i))
+                        }
+                    }
+                    rows.put(row)
+                }
+            }
+            out.put(table, rows)
+        }
+        return out
+    }
+
+    /** Replaces everything with [tables] (as made by [dumpAll]) in one transaction: it all lands or none of it does. */
+    fun restoreAll(tables: JSONObject) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            for (table in BACKUP_TABLES) db.delete(table, null, null)
+            for (table in BACKUP_TABLES) {
+                val rows = tables.optJSONArray(table) ?: continue
+                for (i in 0 until rows.length()) {
+                    val row = rows.getJSONObject(i)
+                    val values = ContentValues()
+                    for (key in row.keys()) {
+                        when (val v = row.get(key)) {
+                            JSONObject.NULL -> values.putNull(key)
+                            is Int -> values.put(key, v.toLong())
+                            is Long -> values.put(key, v)
+                            is Double -> values.put(key, v)
+                            else -> values.put(key, v.toString())
+                        }
+                    }
+                    db.insertOrThrow(table, null, values)
+                }
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
     }
 
     // --- cursor helpers ---

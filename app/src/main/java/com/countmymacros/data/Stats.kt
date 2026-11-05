@@ -38,6 +38,58 @@ object Stats {
     }
 }
 
+object Days {
+    /**
+     * The day the diary should show once the calendar moves from [oldToday] to [newToday]: a diary
+     * left on "today" follows it, one the user navigated to another day stays where it is.
+     */
+    fun follow(shown: LocalDate, oldToday: LocalDate, newToday: LocalDate): LocalDate =
+        if (shown == oldToday) newToday else shown
+}
+
+object Sessions {
+    /** A live workout older than this was almost surely forgotten, not still being done. */
+    const val STALE_MS = 6 * 3_600_000L
+
+    /** What a forgotten workout is assumed to have lasted, until the user says otherwise. */
+    const val FORGOTTEN_DEFAULT_MIN = 60
+
+    fun isStale(startMs: Long, nowMs: Long) = nowMs - startMs > STALE_MS
+}
+
+/** How one workout went for one exercise. [e1rm] is 0 when no working set had both weight and reps. */
+data class ExercisePoint(val date: String, val bestKg: Double, val bestReps: Int, val e1rm: Double, val volume: Double)
+
+object ExerciseStats {
+    /** Epley's estimate of the one-rep max. */
+    fun e1rm(kg: Double, reps: Int): Double = when {
+        kg <= 0 || reps <= 0 -> 0.0
+        reps == 1 -> kg
+        else -> kg * (1 + reps / 30.0)
+    }
+
+    /** One point per workout that included [exerciseId] with a completed working set, oldest first. */
+    fun series(history: List<Workout>, exerciseId: String): List<ExercisePoint> =
+        history.sortedBy { it.startMs }.mapNotNull { w ->
+            val sets = w.exercises.filter { it.exerciseId == exerciseId }.flatMap { it.sets }
+            val best = Records.best(sets) ?: return@mapNotNull null
+            val working = sets.filter { it.done && it.type != SetType.WARMUP }
+            ExercisePoint(
+                date = w.date,
+                bestKg = best.kg,
+                bestReps = best.reps,
+                e1rm = working.maxOf { e1rm(it.kg, it.reps) },
+                volume = working.sumOf { it.kg * it.reps },
+            )
+        }
+
+    /** Exercises done in [history] (newest workout first), most recently done first, at most [limit]. */
+    fun recentExerciseIds(history: List<Workout>, limit: Int): List<String> =
+        history.sortedByDescending { it.startMs }
+            .flatMap { w -> w.exercises.filter { e -> e.sets.any { it.done } }.map { it.exerciseId } }
+            .distinct().take(limit)
+}
+
 object Suggestions {
     /** The routine to do next: one never done first, else the one whose last workout is the oldest. */
     fun nextRoutine(routines: List<Routine>, history: List<Workout>): Routine? {

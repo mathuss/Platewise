@@ -190,6 +190,9 @@
     <string name="goal_lose">Bajar de peso</string>
     <string name="goal_maintain">Mantener</string>
     <string name="goal_gain">Ganar músculo</string>
+    <!-- Formas cortas para el selector de tres opciones: las largas no entran en un tercio del ancho. -->
+    <string name="goal_lose_short">Bajar</string>
+    <string name="goal_gain_short">Ganar</string>
     <string name="deficit_line">Déficit: %d%% de tu gasto diario</string>
     <string name="surplus_line">Superávit: %d%% de tu gasto diario</string>
     <string name="macro_split">Distribución de macros</string>
@@ -381,4 +384,44 @@
         <item quantity="many">%d ejercicios elegidos</item>
         <item quantity="other">%d ejercicios elegidos</item>
     </plurals>
+
+    <!-- deshacer, entrenamientos olvidados, copia de seguridad, progreso de fuerza -->
+    <string name="undo">Deshacer</string>
+    <string name="toast_entry_deleted">%s eliminado</string>
+    <string name="toast_weight_deleted">Registro de peso eliminado</string>
+    <string name="toast_set_removed">Serie eliminada</string>
+    <string name="toast_exercise_removed">Ejercicio quitado</string>
+    <string name="stale_title">¿Dejaste el entrenamiento abierto?</string>
+    <string name="stale_body">Empezó hace unas %1$d horas. ¿Cuánto duró realmente el entrenamiento?</string>
+    <string name="data_title">Copia de seguridad</string>
+    <string name="data_body">Todo se guarda solo en este teléfono. Exportá una copia para resguardarlo o pasarlo a otro teléfono.</string>
+    <string name="export_data">Exportar</string>
+    <string name="import_data">Importar</string>
+    <string name="import_confirm_title">¿Reemplazar tus datos?</string>
+    <string name="import_confirm_body">Importar reemplaza todo lo que hay en este teléfono (diario, alimentos, pesos, rutinas, entrenamientos y metas) por lo que tiene el archivo.</string>
+    <string name="import_confirm">Reemplazar</string>
+    <string name="toast_exported">Copia guardada</string>
+    <string name="toast_export_failed">No se pudo guardar la copia</string>
+    <string name="toast_imported">Datos importados</string>
+    <string name="toast_import_invalid">Ese archivo no es una copia de Platewise</string>
+    <string name="toast_import_failed">No se pudo importar el archivo; no se cambió nada</string>
+    <string name="strength_title">Fuerza</string>
+    <string name="strength_hint">Tocá un ejercicio para ver cómo progresó</string>
+    <string name="no_strength">Terminá un entrenamiento y acá vas a ver tu progreso de fuerza</string>
+    <string name="metric_weight">Peso máx.</string>
+    <string name="metric_1rm">1RM est.</string>
+    <string name="metric_volume">Volumen</string>
+    <string name="metric_reps">Reps máx.</string>
+    <string name="sessions_title">Sesiones</string>
+    <string name="best_so_far">Mejor: %s</string>
+    <string name="volume_value">%d kg de volumen</string>
+
+    <!-- perfil: índice de masa corporal y ritmo -->
+    <string name="bmi_title">IMC</string>
+    <string name="bmi_under">Bajo peso</string>
+    <string name="bmi_normal">Rango saludable</string>
+    <string name="bmi_over">Sobrepeso</string>
+    <string name="bmi_obese">Obesidad</string>
+    <string name="bmi_note">Es una guía general: no distingue músculo de grasa.</string>
+    <string name="pace_delta">%s kcal / día</string>
 </resources>

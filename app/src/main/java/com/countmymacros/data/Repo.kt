@@ -102,6 +102,21 @@ class Repo(private val context: Context) {
         }
     }
 
+    // --- backup ---
+
+    fun exportJson(): String = Backup.encode(db.dumpAll(), prefs.profile, System.currentTimeMillis())
+
+    /** Replaces all data with the backup in [json]. Throws [BackupException], or a SQLite error, leaving the data untouched. */
+    fun importJson(json: String) {
+        val (tables, profile) = Backup.decode(json)
+        db.restoreAll(tables)
+        prefs.profile = profile
+        prefs.profileSet = true
+    }
+
+    /** Every workout, for charts and records. */
+    fun allWorkouts(): List<Workout> = db.recentWorkouts(Int.MAX_VALUE)
+
     // --- weight ---
 
     fun weights(): List<Weight> = db.weights()

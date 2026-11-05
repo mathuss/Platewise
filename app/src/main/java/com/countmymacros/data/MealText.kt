@@ -21,14 +21,30 @@ object MealText {
     private val FRACTION = Regex("^(\\d+)\\s*/\\s*(\\d+)\\s*")
     private val NUMBER = Regex("^(\\d+(?:[.,]\\d+)?)\\s*")
     private val PAIR = Regex("^(un par de|a pair of)\\s*")
-    private val UNIT_GRAMS = Regex("^(gramos|gramo|grs|gr|g|ml)\\b\\s*(?:de\\s+)?")
+    // Weight and volume units, longest spellings first. Volume counts as grams (ml ≈ g).
+    private val UNIT_GRAMS = Regex(
+        "^(kilogramos|kilogramo|kilos|kilo|kgs|kg|gramos|gramo|grs|gr|g|mililitros|mililitro|ml|" +
+            "litros|litro|lt|l|onzas|onza|oz|libras|libra|lbs|lb)\\b\\s*(?:de\\s+)?"
+    )
+
+    /** Grams in one of the units [UNIT_GRAMS] accepts. */
+    private fun gramsPerUnit(unit: String): Double = when (unit) {
+        "kilogramos", "kilogramo", "kilos", "kilo", "kgs", "kg", "litros", "litro", "lt", "l" -> 1000.0
+        "onzas", "onza", "oz" -> 28.35
+        "libras", "libra", "lbs", "lb" -> 453.6
+        else -> 1.0
+    }
 
     private val NUMBER_WORDS = mapOf(
         "un" to 1.0, "una" to 1.0, "uno" to 1.0, "dos" to 2.0, "tres" to 3.0, "cuatro" to 4.0,
         "cinco" to 5.0, "seis" to 6.0, "siete" to 7.0, "ocho" to 8.0, "nueve" to 9.0, "diez" to 10.0,
+        "once" to 11.0, "doce" to 12.0, "trece" to 13.0, "catorce" to 14.0, "quince" to 15.0,
+        "dieciseis" to 16.0, "diecisiete" to 17.0, "dieciocho" to 18.0, "diecinueve" to 19.0, "veinte" to 20.0,
         "medio" to 0.5, "media" to 0.5,
         "a" to 1.0, "an" to 1.0, "one" to 1.0, "two" to 2.0, "three" to 3.0, "four" to 4.0,
         "five" to 5.0, "six" to 6.0, "seven" to 7.0, "eight" to 8.0, "nine" to 9.0, "ten" to 10.0,
+        "eleven" to 11.0, "twelve" to 12.0, "thirteen" to 13.0, "fourteen" to 14.0, "fifteen" to 15.0,
+        "sixteen" to 16.0, "seventeen" to 17.0, "eighteen" to 18.0, "nineteen" to 19.0, "twenty" to 20.0,
         "half" to 0.5,
     )
 
@@ -40,7 +56,9 @@ object MealText {
     )
     private val PORTION_WORDS = setOf(
         "taza", "plato", "vaso", "lata", "porcion", "rodaja", "feta", "unidad", "cucharada",
+        "cucharadita", "punado", "pieza", "pedazo", "tazon",
         "cup", "glass", "can", "slice", "serving", "portion",
+        "tbsp", "tsp", "tablespoon", "teaspoon", "handful", "piece", "bowl",
     )
 
     fun parse(text: String, foods: List<Food>): ParsedMeal {
@@ -89,6 +107,7 @@ object MealText {
         val unit = UNIT_GRAMS.find(rest)
         if (unit != null) {
             grams = true
+            quantity *= gramsPerUnit(unit.groupValues[1])
             rest = rest.substring(unit.range.last + 1).trim()
         } else {
             val firstWord = singularize(rest.substringBefore(' '))

@@ -188,6 +188,9 @@
     <string name="goal_lose">Lose weight</string>
     <string name="goal_maintain">Maintain</string>
     <string name="goal_gain">Build muscle</string>
+    <!-- Short forms for the three-way selector: the long ones don't fit a third of the width. -->
+    <string name="goal_lose_short">Lose</string>
+    <string name="goal_gain_short">Gain</string>
     <string name="deficit_line">Deficit: %d%% of your daily expenditure</string>
     <string name="surplus_line">Surplus: %d%% of your daily expenditure</string>
     <string name="macro_split">Macro split</string>
@@ -375,4 +378,44 @@
         <item quantity="one">%d exercise selected</item>
         <item quantity="other">%d exercises selected</item>
     </plurals>
+
+    <!-- undo, forgotten workouts, backup, strength progress -->
+    <string name="undo">Undo</string>
+    <string name="toast_entry_deleted">%s removed</string>
+    <string name="toast_weight_deleted">Weight entry deleted</string>
+    <string name="toast_set_removed">Set removed</string>
+    <string name="toast_exercise_removed">Exercise removed</string>
+    <string name="stale_title">Left this workout open?</string>
+    <string name="stale_body">It started about %1$d hours ago. How long did the training really last?</string>
+    <string name="data_title">Backup</string>
+    <string name="data_body">Everything is stored only on this phone. Export a copy to keep it safe or to move to another phone.</string>
+    <string name="export_data">Export</string>
+    <string name="import_data">Import</string>
+    <string name="import_confirm_title">Replace your data?</string>
+    <string name="import_confirm_body">Importing replaces everything on this phone (diary, foods, weights, routines, workouts and goals) with what is in the file.</string>
+    <string name="import_confirm">Replace</string>
+    <string name="toast_exported">Backup saved</string>
+    <string name="toast_export_failed">Couldn\'t save the backup</string>
+    <string name="toast_imported">Data imported</string>
+    <string name="toast_import_invalid">That file isn\'t a Platewise backup</string>
+    <string name="toast_import_failed">Couldn\'t import the file; nothing was changed</string>
+    <string name="strength_title">Strength</string>
+    <string name="strength_hint">Tap an exercise to see how it has progressed</string>
+    <string name="no_strength">Finish a workout and your strength progress shows up here</string>
+    <string name="metric_weight">Top weight</string>
+    <string name="metric_1rm">Est. 1RM</string>
+    <string name="metric_volume">Volume</string>
+    <string name="metric_reps">Top reps</string>
+    <string name="sessions_title">Sessions</string>
+    <string name="best_so_far">Best: %s</string>
+    <string name="volume_value">%d kg volume</string>
+
+    <!-- profile: body-mass index and pace -->
+    <string name="bmi_title">BMI</string>
+    <string name="bmi_under">Underweight</string>
+    <string name="bmi_normal">Healthy range</string>
+    <string name="bmi_over">Overweight</string>
+    <string name="bmi_obese">Obesity</string>
+    <string name="bmi_note">A rough guide: it can\'t tell muscle from fat.</string>
+    <string name="pace_delta">%s kcal / day</string>
 </resources>

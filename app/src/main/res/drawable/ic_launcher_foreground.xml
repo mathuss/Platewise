@@ -11,28 +11,28 @@
         android:strokeWidth="1.36"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M24.27,39.5v7.25 M26.74,39.5v7.25 M29.2,39.5v7.25 M24.27,46.75q0,3 2.47,3t2.47,-3" />
+        android:pathData="M25.44,40v7 M27.82,40v7 M30.2,40v7 M25.44,47q0,3 2.38,3t2.38,-3" />
     <!-- fork handle -->
     <path
         android:strokeColor="#FF3D5010"
         android:strokeWidth="2.6"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M26.74,49.75V68.5" />
+        android:pathData="M27.82,50V68" />
     <!-- knife handle -->
     <path
         android:strokeColor="#FF3D5010"
         android:strokeWidth="2.6"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:pathData="M79.65,52.38V70.24" />
+        android:pathData="M78.65,52.43V69.68" />
     <!-- knife blade -->
     <path
         android:fillColor="#FF3D5010"
         android:strokeColor="#FF3D5010"
         android:strokeWidth="0.6"
         android:strokeLineJoin="round"
-        android:pathData="M78,37.76c3.8,1.51 4.3,9.07 3.3,14.62h-3.3z" />
+        android:pathData="M77,38.32c3.8,1.46 4.3,8.76 3.3,14.11h-3.3z" />
     <!-- plate -->
     <path
         android:fillColor="#FF3D5010"
